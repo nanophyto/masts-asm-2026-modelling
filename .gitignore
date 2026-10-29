@@ -1,0 +1,10 @@
+outputs/
+*.jld2
+*.nc
+__pycache__/
+.pytest_cache/
+.venv/
+.vscode/
+.julia/
+*.log
+.DS_Store

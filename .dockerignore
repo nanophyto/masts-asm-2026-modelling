@@ -1,0 +1,8 @@
+.git
+outputs
+.venv
+__pycache__
+.pytest_cache
+*.jld2
+*.nc
+*.zip

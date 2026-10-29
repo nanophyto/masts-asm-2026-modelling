@@ -1,0 +1,3 @@
+# Abil 26.5.4.post2 pins its own core scientific dependencies.
+# Requires Python >=3.9,<3.13; this workshop uses Python 3.11.
+abil==26.5.4.post2
