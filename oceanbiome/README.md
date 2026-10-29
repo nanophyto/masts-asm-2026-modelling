@@ -4,7 +4,7 @@ The Julia environment provides OceanBioME, Oceananigans and CairoMakie for the
 mechanistic modelling exercises. Cycle 1.1 establishes and tests these
 scientific dependencies. The first LOBSTER column will be implemented in Cycle 1.2.
 
-From the repository root, with Julia 1.13.3 and Python 3.11 installed:
+From the repository root, with Julia 1.13.3 installed and a Python 3.11 conda environment activated:
 
 ```bash
 ./scripts/setup_local.sh
