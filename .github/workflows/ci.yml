@@ -44,3 +44,5 @@ jobs:
         run: julia --startup-file=no --project=oceanbiome -e 'using Pkg; Pkg.instantiate()'
       - name: Test Julia imports and versions
         run: julia --startup-file=no --project=oceanbiome oceanbiome/test/runtests.jl
+      - name: Run short LOBSTER teaching exercise
+        run: julia --startup-file=no --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quick
