@@ -1,10 +1,22 @@
+name = "MASTSWorkshop"
+uuid = "aa9d4786-0926-485a-878a-3322fc83b354"
+version = "0.1.0"
+
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 OceanBioME = "a49af516-9db8-4be4-be45-1dad61c5a376"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 
+# Makie plotting methods are activated when CairoMakie is loaded.
+# It remains a direct dependency so the workshop environment installs it.
+[weakdeps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+
+[extensions]
+MASTSWorkshopMakieExt = "CairoMakie"
+
 [compat]
 CairoMakie = "=0.15.16"
 OceanBioME = "=0.20.1"
 Oceananigans = "=0.114.1"
-julia = "1.13"
+julia = "1.10"

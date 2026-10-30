@@ -1,0 +1,53 @@
+name: Smoke tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: abil/requirements.txt
+      - name: Install Abil
+        run: python -m pip install -r abil/requirements.txt
+      - name: Test Python imports
+        run: python -m unittest discover -s abil/tests -p 'test_*.py' -v
+
+  julia:
+    runs-on: ubuntu-latest
+    env:
+      JULIA_NUM_THREADS: "1"
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10'
+      - uses: julia-actions/cache@v3
+        with:
+          delete-old-caches: false
+      - name: Require committed Julia manifest
+        run: test -f oceanbiome/Manifest.toml
+      - name: Instantiate Julia environment without eager plotting precompilation
+        env:
+          JULIA_PKG_PRECOMPILE_AUTO: "0"
+        run: julia --startup-file=no --project=oceanbiome -e 'using Pkg; Pkg.instantiate()'
+      - name: Test Julia imports and versions
+        run: julia --startup-file=no --project=oceanbiome oceanbiome/test/runtests.jl
+      - name: Run short LOBSTER teaching exercise and check diagnostics
+        run: |
+          julia --startup-file=no --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quick
+          test -s outputs/oceanbiome/control_diagnostics.csv
+          test -s outputs/oceanbiome/reduced_grazing_diagnostics.csv

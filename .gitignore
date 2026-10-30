@@ -8,3 +8,5 @@ __pycache__/
 .julia/
 *.log
 .DS_Store
+docs/build/
+docs/src/generated/

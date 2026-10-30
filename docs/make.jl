@@ -1,0 +1,182 @@
+using Pkg
+Pkg.instantiate()
+using Documenter, Literate
+
+root = normpath(joinpath(@__DIR__, ".."))
+scientific_project = joinpath(root, "oceanbiome")
+exercise_dir = joinpath(scientific_project, "exercises")
+assets_dir = joinpath(@__DIR__, "src", "assets")
+generated_dir = joinpath(@__DIR__, "src", "generated")
+mkpath(assets_dir)
+mkpath(generated_dir)
+
+# PR builds validate plotting with short simulations. Full builds generate
+# reference assets for the published tutorial pages.
+quick = get(ENV, "DOCS_QUICK", "false") == "true"
+reuse_results = get(ENV, "DOCS_REUSE_RESULTS", "false") == "true"
+quick && reuse_results && error("DOCS_REUSE_RESULTS requires full-run reference outputs")
+output_base = joinpath(root, "outputs", "oceanbiome", quick ? "docs_smoke" : "reference_docs")
+
+function run_exercise(name, output_dir)
+    exercise = joinpath(exercise_dir, name)
+    command = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $exercise`
+    quick && (command = `$command --quick --plot`)
+    output = cd(root) do
+        read(addenv(command, "MASTS_OUTPUT_DIR" => output_dir), String)
+    end
+    return strip(replace(output, root * "/" => ""))
+end
+
+function budget_summary(label, filename)
+    lines = readlines(filename)
+    length(lines) >= 3 || error("Expected multiple diagnostic samples in $filename")
+    columns = split(first(lines), ',')
+    rows = [parse.(Float64, split(line, ',')) for line in lines[2:end]]
+    all(row -> length(row) == length(columns) && all(isfinite, row), rows) ||
+        error("Invalid diagnostic values in $filename")
+
+    inventory = getindex.(rows, only(findall(==("nitrogen_inventory_mmol_N_m2"), columns)))
+    residual = getindex.(rows, only(findall(==("nitrogen_budget_residual_mmol_N_m2"), columns)))
+    initial_inventory = first(inventory)
+    initial_inventory > 0 || error("Non-positive nitrogen inventory in $filename")
+    max_percent = 100 * maximum(abs, residual) / initial_inventory
+    final_percent = 100 * last(residual) / initial_inventory
+
+    max_percent <= 5 || error("$label nitrogen-budget residual exceeds 5%: $(round(max_percent; digits=2))%")
+    return "| $label | $(round(final_percent; digits=2))% | $(round(max_percent; digits=2))% |"
+end
+
+function check_png(filename)
+    isfile(filename) && filesize(filename) > 8 || error("Missing or empty figure: $filename")
+    open(filename) do io
+        read(io, 8) == UInt8[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] ||
+            error("Invalid PNG header in $filename")
+    end
+end
+
+reference_dir = joinpath(output_base, "reference_column")
+grazing_dir = joinpath(output_base, "grazing")
+# For documentation-only fixes, reuse the previously generated annual
+# profiles, CSV diagnostics, and figures without repeating the simulations.
+reference_output, grazing_output = if reuse_results
+    @info "Reusing existing annual simulation results"
+    (nothing, nothing)
+else
+    # The documentation and scientific exercises have separate Julia environments.
+    # Set up the scientific environment before checking its plotting extension.
+    instantiate_cmd = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $("using Pkg; Pkg.instantiate()")`
+    run(addenv(instantiate_cmd, "JULIA_PKG_PRECOMPILE_AUTO" => "0"))
+    # Catch plotting-extension failures before starting annual simulations.
+    plot_check = "using MASTSWorkshop, CairoMakie; " *
+                 "isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)) && " *
+                 "error(\"Workshop plotting extension did not load\")"
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $plot_check`)
+    (run_exercise("00_reference_column.jl", reference_dir),
+     run_exercise("01_grazing.jl", grazing_dir))
+end
+
+figures = (
+    (reference_dir, "reference_vertical_evolution.png"),
+    (reference_dir, "reference_carbon_export.png"),
+    (reference_dir, "reference_physics.png"),
+    (grazing_dir, "grazing_response.png"),
+    (grazing_dir, "carbon_export.png"),
+)
+for (directory, filename) in figures
+    check_png(joinpath(directory, filename))
+    if !quick
+        cp(joinpath(directory, filename), joinpath(assets_dir, filename); force = true)
+    end
+end
+
+function write_result_assets(prefix, output, checks)
+    quick && return
+    figure_names = last.(figures)
+    if !isnothing(output)
+        log_lines = filter(line -> !any(name -> occursin(name, line), figure_names),
+                           split(output, '\n'))
+        write(joinpath(assets_dir, "$(prefix)_console.md"),
+              "**365-day simulation — console output**\n\n````text\n" *
+              join(log_lines, "\n") * "\n````\n")
+    end
+    write(joinpath(assets_dir, "$(prefix)_budget.md"), """
+        ### Nitrogen-budget check
+
+        The budget compares the seven-tracer nitrogen inventory with sinking
+        loss through the open bottom boundary. The residual is relative to
+        the first saved inventory.
+
+        | Experiment | Final residual | Maximum absolute residual |
+        |:-----------|---------------:|--------------------------:|
+        $(join(checks, "\n"))
+
+        The acceptance threshold is 5% of the starting inventory. The
+        diagnostic uses saved profiles and an upwind estimate of sinking flux.
+        """)
+end
+
+reference_checks = [budget_summary("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))]
+grazing_checks = [budget_summary(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
+                  for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))]
+write_result_assets("reference_column", reference_output, reference_checks)
+write_result_assets("grazing", grazing_output, grazing_checks)
+
+reference_note = "Reference results and figures are provided in the published workshop documentation."
+function asset_text(filename)
+    path = joinpath(assets_dir, filename)
+    isfile(path) ? read(path, String) : reference_note
+end
+function figure_block(filename, caption)
+    isfile(joinpath(assets_dir, filename)) ?
+        "![$caption](../assets/$filename)" : "**$caption:** $reference_note"
+end
+
+function make_tutorial(filename, replacements)
+    Literate.markdown(joinpath(exercise_dir, filename), generated_dir;
+                      flavor = Literate.DocumenterFlavor(),
+                      codefence = "````julia" => "````",
+                      execute = false, credit = false, edit_commit = "main",
+                      postprocess = content -> replace(content, replacements...))
+end
+
+make_tutorial("00_reference_column.jl", (
+    "WORKSHOP_REFERENCE_OUTPUT" => asset_text("reference_column_console.md"),
+    "WORKSHOP_REFERENCE_VERTICAL_FIGURE" => figure_block("reference_vertical_evolution.png", "Reference vertical phytoplankton and nitrate evolution"),
+    "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
+    "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
+))
+
+make_tutorial("01_grazing.jl", (
+    "WORKSHOP_RUN_OUTPUT" => asset_text("grazing_console.md"),
+    "WORKSHOP_GRAZING_FIGURE" => figure_block("grazing_response.png", "Response to reduced grazing"),
+    "WORKSHOP_EXPORT_FIGURE" => figure_block("carbon_export.png", "Control and reduced-grazing carbon export"),
+    "WORKSHOP_BUDGET_CHECK" => asset_text("grazing_budget.md"),
+))
+
+# The appendix is a template: Documenter should process only its generated
+# copy, where the relative links to both tutorials are correct.
+physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
+write(joinpath(generated_dir, "physical_forcing.md"),
+      replace(read(physics_src, String),
+              "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity")))
+
+makedocs(
+    sitename = "MASTS ASM 2026 — Modelling for biogeochemists",
+    modules = Module[],
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", "false") == "true",
+                             edit_link = "main"),
+    pages = [
+        "Home" => "index.md",
+        "Getting started" => "getting_started.md",
+        "Reference column" => "generated/00_reference_column.md",
+        "Parameter experiments" => "generated/01_grazing.md",
+        "Running on your own system" => "running_locally.md",
+        "Appendix" => ["Physical forcing" => "generated/physical_forcing.md"],
+    ],
+)
+
+if get(ENV, "GITHUB_ACTIONS", "false") == "true" &&
+   get(ENV, "GITHUB_REF", "") == "refs/heads/main"
+    repository = ENV["GITHUB_REPOSITORY"]
+    deploydocs(repo = "github.com/$(repository).git", devbranch = "main", versions = nothing)
+end
