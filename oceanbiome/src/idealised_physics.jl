@@ -14,8 +14,9 @@ surface_PAR(x, y, t) = surface_PAR(t)
 mixed_layer_depth(t) = -(15 + 125 * (1 + cos(2pi * t / year)) / 2)
 
 # Stronger turbulent mixing above the mixed-layer base (m^2 / s).
-vertical_diffusivity(x, y, z, t) =
+vertical_diffusivity(z, t) =
     1e-4 + 5e-3 * (1 + tanh((z - mixed_layer_depth(t)) / 10)) / 2
+vertical_diffusivity(x, y, z, t) = vertical_diffusivity(z, t)
 
 # LOBSTER core tracer concentrations, mmol N / m^3.
 initial_conditions() = (

@@ -18,7 +18,8 @@ using Oceananigans.Units
     @test surface_PAR(0, 0, 180days) > surface_PAR(0, 0, 0)
     @test surface_PAR(180days) == surface_PAR(0, 0, 180days)
     @test mixed_layer_depth(0) < mixed_layer_depth(180days)
-    @test vertical_diffusivity(0, 0, -5, 0) > vertical_diffusivity(0, 0, -190, 0)
+    @test vertical_diffusivity(-5, 0) > vertical_diffusivity(-190, 0)
+    @test vertical_diffusivity(-5, 0) == vertical_diffusivity(0, 0, -5, 0)
 end
 
 @testset "LOBSTER column and grazing response" begin
