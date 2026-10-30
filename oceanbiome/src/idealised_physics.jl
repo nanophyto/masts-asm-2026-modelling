@@ -7,7 +7,8 @@ export surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions
 const year = 365days
 
 # Idealised Northern Hemisphere annual cycle. t = 0 corresponds to midwinter.
-surface_PAR(x, y, t) = 2 + 60 * (1 - cos(2pi * t / year))  # W / m^2
+surface_PAR(t) = 2 + 60 * (1 - cos(2pi * t / year))  # W / m^2
+surface_PAR(x, y, t) = surface_PAR(t)
 
 # Negative depths: approximately 140 m in winter and 15 m in summer.
 mixed_layer_depth(t) = -(15 + 125 * (1 + cos(2pi * t / year)) / 2)
