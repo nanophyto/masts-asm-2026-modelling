@@ -41,8 +41,7 @@ The physics and initial conditions live in `oceanbiome/src/idealised_physics.jl`
 Oceananigans writes the two sets of tracer profiles to
 `outputs/oceanbiome/control.jld2` and
 `outputs/oceanbiome/reduced_grazing.jld2`. The script prints the final
-surface phytoplankton concentration from each output file. Carbon export
-and its associated figures are the focus of Cycle 1.3.
+surface phytoplankton concentration from each output file. Cycle 1.3 adds sinking carbon-export diagnostics and comparison figures.
 
 Run the existing tests again with:
 
@@ -57,3 +56,39 @@ simulation than the participant example to keep CI efficient.
 
 See the [official OceanBioME column example](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/column/)
 for the same core constructors and output-writing conventions.
+
+## Cycle 1.3: sinking organic-carbon export and budgets
+
+The same `01_grazing.jl` exercise now uses a **400 m, 80-cell** idealised
+column. The 100 m and 300 m export horizons coincide with grid faces. For
+both grazing treatments it saves:
+
+- `control.jld2` and `reduced_grazing.jld2`: Oceananigans tracer profiles.
+- `control_diagnostics.csv` and `reduced_grazing_diagnostics.csv`: surface
+  phytoplankton/nitrate, downward organic-carbon export at 100 and 300 m,
+  cumulative export, nitrogen inventory and approximate budget residual.
+- `grazing_comparison.png`: a six-panel control-versus-experiment figure.
+
+The CSV has time in days, instantaneous flux in `mg C m^-2 day^-1` and
+cumulative export in `g C m^-2`. LOBSTER's particulate tracers are in
+`mmol N m^-3`; the fixed conversion is **106 mol C : 16 mol N** and
+**12.011 mg C/mmol C**. Downward-positive export is computed from the
+OceanBioME sinking velocity at each face and the tracer concentration in
+the cell immediately above it (a simple upwind diagnostic).
+
+The budget compares changes in the **total nitrogen inventory across all
+seven LOBSTER pools** with cumulative sinking loss at the bottom of the
+open column. No external nitrogen source or deep restoring is imposed at
+this stage. Since the reported flux uses profile snapshots and a simple
+upwind face estimate, the residual is a numerical/sampling diagnostic.
+It can be reduced by saving profiles more frequently.
+
+The full 120-day run creates the plot automatically. To test plotting on a
+short run (which also loads and compiles CairoMakie), use:
+
+```bash
+julia --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quick --plot
+```
+
+The ordinary `--quick` smoke test used in CI computes both flux and
+budget diagnostics and writes CSV files without loading Makie.

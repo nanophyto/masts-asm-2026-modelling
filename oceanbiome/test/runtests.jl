@@ -57,3 +57,29 @@ end
 
     @test any(interior(control.tracers.P) .!= interior(reduced.tracers.P))
 end
+
+include(joinpath(@__DIR__, "..", "src", "column_diagnostics.jl"))
+using .ColumnDiagnostics: face_index, downward_nitrogen_flux, cumulative_trapezoid,
+                          carbon_flux_mg_per_day, carbon_export_g_per_m2
+
+@testset "Carbon export and nitrogen budget diagnostics" begin
+    grid = RectilinearGrid(size = 40, extent = 400meters,
+                           topology = (Flat, Flat, Bounded))
+    @test (face_index(grid, 100), face_index(grid, 300), face_index(grid, 400)) == (31, 11, 1)
+    @test_throws ArgumentError face_index(grid, 105)
+    @test_throws ArgumentError face_index(grid, 450)
+
+    @test downward_nitrogen_flux(0.1, 0.2, -2 / day, -50 / day) ≈ 10.2 / day
+    @test downward_nitrogen_flux(0.1, 0.2, 2 / day, 50 / day) == 0
+
+    # A constant 1 mmol N/(m² day) corresponds to 106/16 mmol C per day.
+    rate = 1 / day
+    times = [0.0, 1day, 2days]
+    expected_mg_C = 12.011 * 106 / 16
+    @test carbon_flux_mg_per_day(rate) ≈ expected_mg_C
+    @test carbon_export_g_per_m2(times, fill(rate, 3)) ≈
+          [0, 1, 2] .* expected_mg_C ./ 1000
+    @test cumulative_trapezoid(times, fill(rate, 3)) ≈ [0, 1, 2]
+    @test_throws DimensionMismatch cumulative_trapezoid(times, [rate])
+    @test_throws ArgumentError cumulative_trapezoid([0.0, 0.0], [rate, rate])
+end

@@ -51,8 +51,8 @@ Outputs from later modelling exercises will be written under `outputs/`
 
 **Cycle 1.1:** Dependency specification and setup smoke tests.
 **Cycle 1.2:** First idealised LOBSTER column and control/reduced-grazing runs.
-Carbon export, the workshop Docker image and realistic station datasets belong
-to later cycles. Abil.py is installed and import-tested; its exercises are
+**Cycle 1.3:** Carbon-export diagnostics at 100 m and 300 m, nitrogen budgets and figures.
+The workshop Docker image and realistic station datasets belong to later cycles. Abil.py is installed and import-tested; its exercises are
 prepared separately.
 
 Run the 1D LOBSTER example after setup:
@@ -65,11 +65,13 @@ Use `--quick` after the script name for a two-day end-to-end smoke run.
 
 The example uses the native OceanBioME/Oceananigans model constructors, with
 idealised physical forcing in a small helper module. Its outputs appear under
-`outputs/oceanbiome/` and are excluded from Git.
+`outputs/oceanbiome/` and are excluded from Git. The full run generates a
+comparison PNG and CSV files containing carbon export and nitrogen budgets;
+use `--quick --plot` to test plotting on the two-day run.
 
 ## Scientific notes
 
-LOBSTER represents phytoplankton, zooplankton, nitrate, ammonium, dissolved organic matter and small/large sinking particulate matter. For teaching we convert the nitrogen-based sinking flux to carbon using C:N = 106:16 and report `g C m^-2` across approximate 100 m and 300 m horizons. Carbon export at a depth is distinct from long-term sequestration. Carbonate chemistry and atmospheric CO2 forcing are not needed for this diagnostic.
+LOBSTER represents phytoplankton, zooplankton, nitrate, ammonium, dissolved organic matter and small/large sinking particulate matter. For teaching we convert the nitrogen-based sinking flux to carbon using C:N = 106:16 and report `g C m^-2` across exact 100 m and 300 m grid faces. Carbon export at a depth is distinct from long-term sequestration. Carbonate chemistry and atmospheric CO2 forcing are not needed for this diagnostic.
 
 **References**
 
@@ -79,5 +81,4 @@ LOBSTER represents phytoplankton, zooplankton, nitrate, ammonium, dissolved orga
 
 ## Next cycle
 
-Cycle 1.3 adds carbon export and budget diagnostics; Cycle 1.4 packages the
-environment in the workshop container.
+Cycle 1.4 packages the tested environment in the workshop container.

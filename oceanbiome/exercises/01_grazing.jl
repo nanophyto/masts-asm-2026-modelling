@@ -1,24 +1,28 @@
-# MASTS ASM 2026: first OceanBioME column (Cycle 1.2).
-# Run from the repository root:
-# julia --project=oceanbiome oceanbiome/exercises/01_grazing.jl
-# Add --quick for a 2-day smoke run.
+# MASTS ASM 2026: LOBSTER grazing experiment (Cycles 1.2-1.3).
+# From the repository root:
+#   julia --project=oceanbiome oceanbiome/exercises/01_grazing.jl
+# Add --quick for a 2-day smoke run; --quick --plot also produces the figure.
 
 using OceanBioME, Oceananigans
 using Oceananigans.Units
 
 include(joinpath(@__DIR__, "..", "src", "idealised_physics.jl"))
+include(joinpath(@__DIR__, "..", "src", "column_diagnostics.jl"))
 using .IdealisedPhysics: surface_PAR, vertical_diffusivity, initial_conditions
+using .ColumnDiagnostics: diagnose_column, write_diagnostics
 
-# Both experiments use exactly the same idealised physics and initial state.
-grid = RectilinearGrid(size = 40, extent = 200meters,
+# Both experiments use identical idealised physics and initial conditions.
+# A 400 m column places the 100 m and 300 m export horizons on grid faces.
+grid = RectilinearGrid(size = 80, extent = 400meters,
                        topology = (Flat, Flat, Bounded))
 initial = initial_conditions()
 output_dir = joinpath(@__DIR__, "..", "..", "outputs", "oceanbiome")
 mkpath(output_dir)
 quick = "--quick" in ARGS
 
+results = Dict{String, Any}()
+
 # Grazing is a genuine PhytoZoo parameter (units 1/s).
-# Explore the control and a 50% reduction in zooplankton grazing.
 for (label, grazing_rate) in (("control", 0.8 / day),
                               ("reduced_grazing", 0.4 / day))
 
@@ -38,14 +42,26 @@ for (label, grazing_rate) in (("control", 0.8 / day),
     filename = joinpath(output_dir, "$(label).jld2")
     simulation.output_writers[:profiles] = JLD2Writer(model, model.tracers;
                                                        filename,
-                                                       schedule = TimeInterval(quick ? 1day : 5days),
+                                                       schedule = TimeInterval(quick ? 6hours : 1day),
                                                        overwrite_files = true)
-
     run!(simulation)
 
-    # FieldTimeSeries is Oceananigans' standard interface to stored results.
-    P = FieldTimeSeries(filename, "P")
-    println("$(label): final surface phytoplankton = ",
-            P[end][1, 1, grid.Nz], " mmol N / m^3")
+    d = diagnose_column(filename, model)
+    results[label] = d
+    write_diagnostics(joinpath(output_dir, "$(label)_diagnostics.csv"), d)
+
+    println("$(label): final surface phytoplankton = ", last(d.surface_P), " mmol N/m³")
+    println("$(label): cumulative export at 100 m = ", last(d.export_100.cumulative_g_C), " g C/m²")
+    println("$(label): cumulative export at 300 m = ", last(d.export_300.cumulative_g_C), " g C/m²")
+    println("$(label): nitrogen budget residual = ", last(d.budget_residual),
+            " mmol N/m² (", 100 * last(d.budget_residual) / first(d.nitrogen_inventory),
+            "% of sampled starting inventory)")
+    println("Saved $filename and diagnostics CSV")
+end
+
+if !quick || "--plot" in ARGS
+    include(joinpath(@__DIR__, "..", "src", "plot_grazing.jl"))
+    filename = joinpath(output_dir, "grazing_comparison.png")
+    plot_grazing(results["control"], results["reduced_grazing"], filename)
     println("Saved $filename")
 end
