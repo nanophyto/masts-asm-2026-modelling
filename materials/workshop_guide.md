@@ -11,7 +11,7 @@ Participants use the same cloud workstation for both exercises. All environmenta
 ## OceanBioME exercise
 
 1. Walk through the [reference column](../docs/src/index.md): model construction, initial conditions, the simulation and its plots.
-2. Inspect phytoplankton and nitrate evolution and the carbon-export diagnostics at 100 m and 300 m.
+2. Inspect six-tracer evolution, carbon export at 100 m and 300 m, and the depth-dependent export profile.
 3. Predict how reducing grazing should affect phytoplankton biomass.
 4. Run the [grazing experiment](../oceanbiome/exercises/01_grazing.jl) and compare the two simulations.
 5. Discuss why a biomass increase does not automatically imply a proportional export increase.

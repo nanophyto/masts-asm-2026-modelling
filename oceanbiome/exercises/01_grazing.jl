@@ -18,17 +18,17 @@
 using OceanBioME, Oceananigans
 using Oceananigans.Units
 using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
-                     diagnose_column, write_diagnostics,
+                     diagnose_column, write_diagnostics, write_export_profile,
                      plot_grazing_response, plot_carbon_export
 
 # ## Configure the water column
 #
 # The physical environment is an idealised BATS-like seasonal cycle. The grid
-# extends to 400 m, so 100 m and 300 m lie on exact grid faces. Initial
+# extends to 500 m, with 5 m cells and export horizons on grid faces. Initial
 # concentrations and physical forcing are shared by both simulations.
 #
 # Both experiments use identical idealised physics and initial conditions.
-grid = RectilinearGrid(size = 80, extent = 400meters,
+grid = RectilinearGrid(size = 100, extent = 500meters,
                        topology = (Flat, Flat, Bounded))
 initial = initial_conditions()
 output_dir = get(ENV, "MASTS_OUTPUT_DIR",
@@ -72,6 +72,7 @@ for (label, grazing_rate) in (("control", 0.8 / day),
     d = diagnose_column(filename, model)
     results[label] = d
     write_diagnostics(joinpath(output_dir, "$(label)_diagnostics.csv"), d)
+    write_export_profile(joinpath(output_dir, "$(label)_export_profile.csv"), d)
 
     println("$(label): final surface phytoplankton = ", last(d.surface_P), " mmol N/m³")
     println("$(label): cumulative export at 100 m = ", last(d.export_100.cumulative_g_C), " g C/m²")

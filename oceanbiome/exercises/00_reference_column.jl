@@ -2,7 +2,8 @@
 #
 # We begin with one idealised ocean column. This is the reference simulation
 # for the workshop: we construct a LOBSTER ecosystem, provide seasonal light
-# and mixing, and examine phytoplankton, nitrate and particulate carbon export.
+# and mixing, and examine the evolving tracer structure and particulate
+# carbon export.
 #
 # From the repository root:
 #
@@ -10,25 +11,24 @@
 # julia --project=oceanbiome oceanbiome/exercises/00_reference_column.jl
 # ```
 #
-# The default run is 365 days. Use `--quick` for a two-day check or
-# `--quick --plot` to exercise the plotting code.
+# The default run is 365 days. Use `--quick` for a two-day check.
 
 # ## Load OceanBioME and Oceananigans
 
-using OceanBioME, Oceananigans
+using OceanBioME, Oceananigans, CairoMakie
 using Oceananigans.Units
 using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
-                     diagnose_column, write_diagnostics,
-                     plot_vertical_evolution, plot_reference_export,
+                     diagnose_column, write_diagnostics, write_export_profile,
+                     plot_vertical_evolution, plot_reference_export, plot_export_profile,
                      plot_idealised_physics
 
 # ## Define the water column
 #
-# This 400 m column uses 80 equally spaced vertical cells. The idealised
+# This 500 m column uses 100 equally spaced vertical cells. The idealised
 # physical forcing is supplied by the `MASTSWorkshop` package. The appendix
 # explains the annual light and mixing cycles.
 
-grid = RectilinearGrid(size = 80, extent = 400meters,
+grid = RectilinearGrid(size = 100, extent = 500meters,
                        topology = (Flat, Flat, Bounded))
 initial = initial_conditions()
 
@@ -61,7 +61,6 @@ set!(model; initial...)
 # faces. The two-day option saves a profile every six hours.
 
 quick = "--quick" in ARGS
-make_plots = !quick || "--plot" in ARGS
 output_dir = get(ENV, "MASTS_OUTPUT_DIR",
                  joinpath(@__DIR__, "..", "..", "outputs", "oceanbiome", "reference_column"))
 mkpath(output_dir)
@@ -76,10 +75,12 @@ run!(simulation)
 
 diagnostics = diagnose_column(filename, model)
 write_diagnostics(joinpath(output_dir, "reference_diagnostics.csv"), diagnostics)
+write_export_profile(joinpath(output_dir, "reference_export_profile.csv"), diagnostics)
 
 println("Reference: final surface phytoplankton = ", last(diagnostics.surface_P), " mmol N/m³")
 println("Reference: cumulative export at 100 m = ", last(diagnostics.export_100.cumulative_g_C), " g C/m²")
 println("Reference: cumulative export at 300 m = ", last(diagnostics.export_300.cumulative_g_C), " g C/m²")
+println("Reference: fitted Martin b = ", diagnostics.export_profile.martin_b)
 println("Reference: nitrogen budget residual = ", last(diagnostics.budget_residual),
         " mmol N/m² (", 100 * last(diagnostics.budget_residual) / first(diagnostics.nitrogen_inventory),
         "% of sampled starting inventory)")
@@ -90,18 +91,16 @@ println("Saved $filename and diagnostics CSV")
 # The annual simulation results are summarised below.
 #md # WORKSHOP_REFERENCE_OUTPUT
 
-# ## Plot vertical phytoplankton and nitrate
+# ## Plot the vertical tracer evolution
 #
-# These depth-time sections show how the initially uniform ecosystem responds
-# to light, mixing and biological processes. Compare the surface and deep
-# layers as the simulation develops.
+# These depth-time sections show the major LOBSTER tracers in the annual
+# reference simulation: zooplankton, phytoplankton, nitrate, small POM,
+# large POM and DOM. Together they show how the initially uniform ecosystem
+# responds to light, mixing and biological processes.
 
-if make_plots
-    @eval using CairoMakie  # Activates MASTSWorkshop's plotting extension.
-    vertical_figure = joinpath(output_dir, "reference_vertical_evolution.png")
-    plot_vertical_evolution(diagnostics, vertical_figure)
-    println("Saved $vertical_figure")
-end
+vertical_figure = joinpath(output_dir, "reference_vertical_evolution.png")
+plot_vertical_evolution(diagnostics, vertical_figure)
+println("Saved $vertical_figure")
 
 #md # WORKSHOP_REFERENCE_VERTICAL_FIGURE
 
@@ -112,24 +111,41 @@ end
 # and 300 m. These fluxes include the adjustment of initially prescribed
 # particulate matter, particularly early in the simulation.
 
-if make_plots
-    export_figure = joinpath(output_dir, "reference_carbon_export.png")
-    plot_reference_export(diagnostics, export_figure)
-    println("Saved $export_figure")
-
-    # The physics diagram is shown in the appendix.
-    physics_figure = joinpath(output_dir, "reference_physics.png")
-    plot_idealised_physics(physics_figure)
-    println("Saved $physics_figure")
-end
+export_figure = joinpath(output_dir, "reference_carbon_export.png")
+plot_reference_export(diagnostics, export_figure)
+println("Saved $export_figure")
 
 #md # WORKSHOP_REFERENCE_EXPORT_FIGURE
 
+# ## Compare export attenuation with the Martin curve
+#
+# Diagnose particle flux every 50 m down to 500 m. The first panel compares
+# LOBSTER's final 90-day mean flux against the [Martin et al. (1987)](https://doi.org/10.1016/0198-0149(87)90086-0) empirical
+# curve, normalized to the simulated flux at 100 m. It also fits a power-law
+# exponent to the model values below 100 m. A negative b indicates that
+# the flux increases with depth over the fitted range. The second panel shows export
+# integrated over the full 365-day run, which includes the initial POM
+# adjustment. The power-law comparison summarizes attenuation; LOBSTER's
+# biological transformations and particle sinking generate the model profile.
+
+profile_figure = joinpath(output_dir, "reference_martin_curve.png")
+plot_export_profile(diagnostics, profile_figure)
+println("Saved $profile_figure")
+
+#md # WORKSHOP_REFERENCE_MARTIN_FIGURE
+
+# The physics diagram is shown in the appendix.
+physics_figure = joinpath(output_dir, "reference_physics.png")
+plot_idealised_physics(physics_figure)
+println("Saved $physics_figure")
+
 # ## What to look for
 #
-# How does the vertical phytoplankton structure evolve? Why might the
-# instantaneous export at 100 m differ from that at 300 m? What do the
-# cumulative fluxes tell us that an individual day's flux cannot?
+# How does the vertical tracer structure evolve? Why might the
+# instantaneous export at 100 m differ from that at 300 m? How does
+# the flux attenuation compare with the empirical Martin curve, and what
+# might explain differences? What do the cumulative fluxes tell us that an
+# individual day's flux cannot?
 #
 # The [physical-forcing appendix](physical_forcing.md) explains the light
 # and mixing environment. Continue with the [grazing experiment](01_grazing.md)

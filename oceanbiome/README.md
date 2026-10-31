@@ -66,11 +66,13 @@ for the same core constructors and output-writing conventions.
 
 ## Cycle 1.3: sinking organic-carbon export and budgets
 
-The same `01_grazing.jl` exercise now uses a **400 m, 80-cell** idealised
-column. The 100 m and 300 m export horizons coincide with grid faces. For
-both grazing treatments it saves:
+The same `01_grazing.jl` exercise now uses a **500 m, 100-cell** idealised
+column. Export is diagnosed every 50 m from 50 to 500 m; the 100 m
+and 300 m horizons coincide with grid faces. For both grazing treatments it saves:
 
 - `control.jld2` and `reduced_grazing.jld2`: Oceananigans tracer profiles.
+- `control_export_profile.csv` and `reduced_grazing_export_profile.csv`:
+  depth-resolved sinking flux, late-period mean flux and integrated export.
 - `control_diagnostics.csv` and `reduced_grazing_diagnostics.csv`: surface
   phytoplankton/nitrate, downward organic-carbon export at 100 and 300 m,
   cumulative export, nitrogen inventory and approximate budget residual.
@@ -93,7 +95,11 @@ It can be reduced by saving profiles more frequently.
 
 The full 365-day grazing run creates both comparison figures. The reference
 column produces `reference_vertical_evolution.png`,
-`reference_carbon_export.png`, and `reference_physics.png`. To test plotting on a
+`reference_carbon_export.png`, `reference_martin_curve.png`, and
+`reference_physics.png`. The export-profile figure compares final 90-day
+mean model fluxes to the Martin et al. (1987) power-law reference anchored
+at 100 m, and shows cumulative export over the full simulated year.
+To test plotting on a
 short run (which also loads and compiles CairoMakie), use:
 
 ```bash
@@ -123,8 +129,8 @@ After changing the project definition, refresh and commit your local manifest:
 julia --threads=1 --project=oceanbiome -e 'using Pkg; Pkg.resolve(); Pkg.instantiate()'
 ```
 
-The 80-cell LOBSTER column runs fastest with one Julia thread. Use
-`julia --threads=1` when running the examples.
+Use `julia --threads=1` when running the examples. The smaller
+80-cell reference column ran fastest with a single thread in local benchmarks.
 
 For a documentation-only correction after successful annual simulations, reuse
 the already generated reference outputs without rerunning the columns:

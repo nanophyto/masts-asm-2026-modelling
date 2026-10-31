@@ -17,7 +17,7 @@ This workshop introduces two approaches to marine biogeochemistry:
    run the simulation and inspect its plots of vertical ecology and carbon export.
 2. **[Change the grazing rate](generated/01_grazing.md):** Compare control
    and reduced-grazing experiments and interpret the effect on plankton and
-   export at 100 m and 300 m.
+   export at 100 m and 300 m, and compare attenuation over 50–500 m with the Martin curve.
 3. **[Running the examples on your own system](running_locally.md):** Set up
    Julia and Python on a laptop and reproduce the exercises after the workshop.
 

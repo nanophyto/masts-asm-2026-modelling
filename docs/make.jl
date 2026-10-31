@@ -78,6 +78,7 @@ end
 figures = (
     (reference_dir, "reference_vertical_evolution.png"),
     (reference_dir, "reference_carbon_export.png"),
+    (reference_dir, "reference_martin_curve.png"),
     (reference_dir, "reference_physics.png"),
     (grazing_dir, "grazing_response.png"),
     (grazing_dir, "carbon_export.png"),
@@ -141,8 +142,9 @@ end
 
 make_tutorial("00_reference_column.jl", (
     "WORKSHOP_REFERENCE_OUTPUT" => asset_text("reference_column_console.md"),
-    "WORKSHOP_REFERENCE_VERTICAL_FIGURE" => figure_block("reference_vertical_evolution.png", "Reference vertical phytoplankton and nitrate evolution"),
+    "WORKSHOP_REFERENCE_VERTICAL_FIGURE" => figure_block("reference_vertical_evolution.png", "Reference evolution of six LOBSTER tracers"),
     "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
+    "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–500 m and Martin-curve comparison"),
     "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
 ))
 

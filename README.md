@@ -89,7 +89,7 @@ the workshop, see [Running the examples on your own system](docs/src/running_loc
 
 ## Scientific notes
 
-LOBSTER represents phytoplankton, zooplankton, nitrate, ammonium, dissolved organic matter and small/large sinking particulate matter. For teaching we convert the nitrogen-based sinking flux to carbon using C:N = 106:16 and report `g C m^-2` across exact 100 m and 300 m grid faces. Carbon export at a depth is distinct from long-term sequestration. Carbonate chemistry and atmospheric CO2 forcing are not needed for this diagnostic.
+LOBSTER represents phytoplankton, zooplankton, nitrate, ammonium, dissolved organic matter and small/large sinking particulate matter. For teaching we convert the nitrogen-based sinking flux to carbon using C:N = 106:16 and diagnose export at 50 m intervals to 500 m, including the 100 m and 300 m reference horizons. The tutorial compares the simulated export profile with a Martin power law. Carbon export at a depth is distinct from long-term sequestration. Carbonate chemistry and atmospheric CO2 forcing are not needed for this diagnostic.
 
 **References**
 

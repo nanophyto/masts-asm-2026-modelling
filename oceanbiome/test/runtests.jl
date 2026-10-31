@@ -2,7 +2,8 @@ using Test, Pkg
 using OceanBioME, Oceananigans
 using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
                      face_index, downward_nitrogen_flux, cumulative_trapezoid,
-                     carbon_flux_mg_per_day, carbon_export_g_per_m2
+                     carbon_flux_mg_per_day, carbon_export_g_per_m2,
+                     martin_flux, fit_martin_exponent
 
 @testset "Workshop Julia environment" begin
     @test v"1.10" <= VERSION < v"2"
@@ -67,6 +68,10 @@ end
     @test (face_index(grid, 100), face_index(grid, 300), face_index(grid, 400)) == (31, 11, 1)
     @test_throws ArgumentError face_index(grid, 105)
     @test_throws ArgumentError face_index(grid, 450)
+    deep_grid = RectilinearGrid(size = 100, extent = 500meters,
+                                topology = (Flat, Flat, Bounded))
+    @test (face_index(deep_grid, 50), face_index(deep_grid, 300),
+           face_index(deep_grid, 500)) == (91, 41, 1)
 
     @test downward_nitrogen_flux(0.1, 0.2, -2 / day, -50 / day) ≈ 10.2 / day
     @test downward_nitrogen_flux(0.1, 0.2, 2 / day, 50 / day) == 0
@@ -81,4 +86,9 @@ end
     @test cumulative_trapezoid(times, fill(rate, 3)) ≈ [0, 1, 2]
     @test_throws DimensionMismatch cumulative_trapezoid(times, [rate])
     @test_throws ArgumentError cumulative_trapezoid([0.0, 0.0], [rate, rate])
+
+    # The fitted exponent recovers a known power law, anchored at 100 m.
+    depths = [100, 200, 300, 500]
+    @test fit_martin_exponent(depths, martin_flux.(depths, 10.0, 0.858)) ≈ 0.858
+    @test isnothing(fit_martin_exponent(depths, [10.0, 5.0, 0.0, 1.0]))
 end
