@@ -53,8 +53,7 @@ Outputs from later modelling exercises will be written under `outputs/`
 **Cycle 1.2:** First idealised LOBSTER column and control/reduced-grazing runs.
 **Cycle 1.3:** Carbon-export diagnostics at 100 m and 300 m, nitrogen budgets and figures.
 **Cycle 1.3b:** Documenter.jl tutorial with executed reference results and figure validation.
-The workshop Docker image and realistic station datasets belong to later cycles. Abil.py is installed and import-tested; its exercises are
-prepared separately.
+Cycle 1.4 includes the combined Code OSS workshop image and an opt-in GHCR publication workflow. Abil.py is installed and import-tested; its exercises are prepared separately.
 
 Begin with the reference LOBSTER column and then change grazing:
 
@@ -97,6 +96,25 @@ LOBSTER represents phytoplankton, zooplankton, nitrate, ammonium, dissolved orga
 - [OceanBioME LOBSTER equations](https://oceanbiome.github.io/OceanBioME.jl/stable/model_components/biogeochemical/LOBSTER/)
 - [Abil.py](https://github.com/nanophyto/Abil)
 
+## Combined workshop container
+
+The [workshop container](container/README.md) includes the browser-based
+Code OSS editor, Julia 1.10, OceanBioME, CairoMakie and Python 3.11 with
+Abil.py. It uses one Julia thread per column and ships with preinstalled,
+precompiled dependencies.
+
+Build and smoke-test it from the repository root:
+
+```bash
+docker build --platform linux/amd64 -f container/Dockerfile -t masts-asm-2026-modelling:local .
+./scripts/test_container.sh masts-asm-2026-modelling:local
+```
+
+The public GitHub Container Registry image can be published manually after
+running the image's tests. The [container instructions](container/README.md)
+cover the local browser editor and public image access.
+
 ## Next cycle
 
-Cycle 1.4 builds the workshop container and prepares public distribution through GitHub Container Registry.
+PR 2 establishes the Google Cloud Workstations cluster, participant access,
+and the tested image deployment.

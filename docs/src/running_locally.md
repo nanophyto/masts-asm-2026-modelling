@@ -81,6 +81,24 @@ For a short two-day check, append `--quick --plot` to either command. This
 also tests CairoMakie figure generation. Initial plotting compilation may
 take longer than later runs.
 
+## Run the workshop image with Docker
+
+A combined Julia/Python environment with browser-based Code OSS is also
+available as a container image. Once the workshop image is published, use
+`ghcr.io/<owner>/masts-asm-2026-modelling:latest` in the following command,
+replacing `<owner>` with the organisation or account hosting the repository:
+
+```bash
+docker run --privileged --rm -p 127.0.0.1:8080:80 \
+  -v masts-workshop-home:/home/user \
+  ghcr.io/<owner>/masts-asm-2026-modelling:latest
+```
+
+Open `http://localhost:8080` and then
+`/home/user/masts-asm-2026-modelling`. The named volume retains edits and
+output files between sessions. See the repository's `container/README.md`
+for local image building and verification.
+
 ## Workshop tutorials and reference plots
 
 The published GitHub Pages documentation contains the reference-column walkthrough,

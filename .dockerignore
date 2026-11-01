@@ -6,3 +6,11 @@ __pycache__
 *.jld2
 *.nc
 *.zip
+
+# Local environment and ephemeral documentation outputs
+**/Manifest.toml.bak
+*.patch
+**/*.pyc
+docs/build
+docs/src/generated
+**/.DS_Store

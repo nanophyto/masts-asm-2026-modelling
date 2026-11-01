@@ -1,0 +1,13 @@
+{
+  "julia.executablePath": "/opt/julia/bin/julia",
+  "julia.environmentPath": "__WORKSPACE__/oceanbiome",
+  "julia.additionalArgs": ["--threads=1"],
+  "julia.useRevise": false,
+  "julia.enableTelemetry": false,
+  "python.defaultInterpreterPath": "/opt/workshop/python/bin/python",
+  "terminal.integrated.env.linux": {
+    "JULIA_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "telemetry.telemetryLevel": "off"
+}
