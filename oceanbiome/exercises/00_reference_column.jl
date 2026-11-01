@@ -19,8 +19,8 @@ using OceanBioME, Oceananigans, CairoMakie
 using Oceananigans.Units
 using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
                      diagnose_column, write_diagnostics, write_export_profile,
-                     plot_vertical_evolution, plot_reference_export, plot_export_profile,
-                     plot_idealised_physics
+                     plot_vertical_evolution, plot_nitrogen_partition, plot_living_fraction,
+                     plot_reference_export, plot_export_profile, plot_idealised_physics
 
 # ## Define the water column
 #
@@ -104,6 +104,39 @@ println("Saved $vertical_figure")
 
 #md # WORKSHOP_REFERENCE_VERTICAL_FIGURE
 
+# ## Where is the nitrogen throughout the year?
+#
+# Integrate all seven pools over the upper 100 m, grouping them into
+# inorganic nutrients (NO₃ + NH₄), living plankton (P + Z), particulate
+# detritus (sPOM + bPOM), and DOM. Both the total inventories and their
+# percentage contributions are plotted. This is a simplified view of the
+# seasonal nitrogen cycling discussed by
+# [Fasham et al. (1990)](https://elischolar.library.yale.edu/journal_of_marine_research/1981/).
+
+partition_figure = joinpath(output_dir, "reference_nitrogen_partition.png")
+plot_nitrogen_partition(diagnostics, partition_figure)
+println("Saved $partition_figure")
+
+#md # WORKSHOP_REFERENCE_PARTITION_FIGURE
+
+# ## What fraction of the particulate matter is living?
+#
+# The ratio (P + Z) / (P + Z + sPOM + bPOM) is shown against day and depth.
+# A second ratio shows the dissolved share of organic N, defined as DOM /
+# (DOM + P + Z + sPOM + bPOM), while a companion panel shows the absolute
+# particulate inventory. Nitrate and ammonium are inorganic and are excluded
+# from this organic ratio. At Station ALOHA,
+# [Karl et al. (2022)](https://doi.org/10.1016/j.pocean.2022.102803)
+# studied living versus nonliving particulate carbon with ATP measurements.
+# Their microbial biomass includes organisms not explicitly represented
+# by LOBSTER, so our nitrogen ratio illustrates the model's compartments.
+
+living_figure = joinpath(output_dir, "reference_living_fraction.png")
+plot_living_fraction(diagnostics, living_figure)
+println("Saved $living_figure")
+
+#md # WORKSHOP_REFERENCE_LIVING_FIGURE
+
 # ## Examine carbon export
 #
 # LOBSTER's small and large particulate pools sink at different speeds. The
@@ -141,7 +174,8 @@ println("Saved $physics_figure")
 
 # ## What to look for
 #
-# How does the vertical tracer structure evolve? Why might the
+# How do living and detrital pools change throughout the year? How does
+# the inorganic nitrogen fraction compare with organic nitrogen? Why might the
 # instantaneous export at 100 m differ from that at 300 m? How does
 # the flux attenuation compare with the empirical Martin curve, and what
 # might explain differences? What do the cumulative fluxes tell us that an

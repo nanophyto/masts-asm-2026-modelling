@@ -77,10 +77,13 @@ end
 
 figures = (
     (reference_dir, "reference_vertical_evolution.png"),
+    (reference_dir, "reference_nitrogen_partition.png"),
+    (reference_dir, "reference_living_fraction.png"),
     (reference_dir, "reference_carbon_export.png"),
     (reference_dir, "reference_martin_curve.png"),
     (reference_dir, "reference_physics.png"),
     (grazing_dir, "grazing_response.png"),
+    (grazing_dir, "grazing_plankton_balance.png"),
     (grazing_dir, "carbon_export.png"),
 )
 for (directory, filename) in figures
@@ -143,6 +146,8 @@ end
 make_tutorial("00_reference_column.jl", (
     "WORKSHOP_REFERENCE_OUTPUT" => asset_text("reference_column_console.md"),
     "WORKSHOP_REFERENCE_VERTICAL_FIGURE" => figure_block("reference_vertical_evolution.png", "Reference evolution of six LOBSTER tracers"),
+    "WORKSHOP_REFERENCE_PARTITION_FIGURE" => figure_block("reference_nitrogen_partition.png", "Upper 100 m nitrogen inventories and fractions"),
+    "WORKSHOP_REFERENCE_LIVING_FIGURE" => figure_block("reference_living_fraction.png", "Living particulate and dissolved-organic nitrogen fractions"),
     "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
     "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–500 m and Martin-curve comparison"),
     "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
@@ -151,6 +156,7 @@ make_tutorial("00_reference_column.jl", (
 make_tutorial("01_grazing.jl", (
     "WORKSHOP_RUN_OUTPUT" => asset_text("grazing_console.md"),
     "WORKSHOP_GRAZING_FIGURE" => figure_block("grazing_response.png", "Response to reduced grazing"),
+    "WORKSHOP_PLANKTON_BALANCE_FIGURE" => figure_block("grazing_plankton_balance.png", "Phytoplankton and zooplankton inventories and grazing response"),
     "WORKSHOP_EXPORT_FIGURE" => figure_block("carbon_export.png", "Control and reduced-grazing carbon export"),
     "WORKSHOP_BUDGET_CHECK" => asset_text("grazing_budget.md"),
 ))

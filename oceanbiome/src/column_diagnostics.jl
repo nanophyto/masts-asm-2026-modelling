@@ -6,7 +6,9 @@ using Oceananigans.Units: days
 
 export face_index, downward_nitrogen_flux, cumulative_trapezoid,
        carbon_flux_mg_per_day, carbon_export_g_per_m2,
-       martin_flux, fit_martin_exponent, diagnose_column, write_diagnostics, write_export_profile
+       martin_flux, fit_martin_exponent, living_particulate_fraction,
+       dissolved_organic_fraction, upper_nitrogen_partition,
+       diagnose_column, write_diagnostics, write_export_profile
 
 const carbon_to_nitrogen = 106 / 16  # mol C per mol N (fixed Redfield ratio)
 const carbon_molar_mass = 12.011     # mg C per mmol C
@@ -67,6 +69,40 @@ function fit_martin_exponent(depths, fluxes; reference_depth = 100)
     return -sum(x .* y) / sum(abs2, x)
 end
 
+# The ratio of living (P + Z) to all explicitly represented particulate nitrogen.
+# Missing particulate matter has no defined fraction and is marked NaN.
+function fraction(numerator, denominator)
+    map((n, d) -> d > 0 ? n / d : NaN, numerator, denominator)
+end
+
+function living_particulate_fraction(P, Z, sPOM, bPOM)
+    living = P .+ Z
+    return fraction(living, living .+ sPOM .+ bPOM)
+end
+
+# Organic dissolved fraction: DIN (NO₃ and NH₄) is deliberately outside the denominator.
+function dissolved_organic_fraction(DOM, P, Z, sPOM, bPOM)
+    return fraction(DOM, DOM .+ P .+ Z .+ sPOM .+ bPOM)
+end
+
+# All inputs are depth × time arrays in mmol N/m³, starting at the bottom.
+# The resulting inventories are in mmol N/m², integrated above a grid face.
+function upper_nitrogen_partition(vertical, Δz, top_face)
+    1 <= top_face <= size(vertical.P, 1) || throw(ArgumentError("invalid upper-column face"))
+    inventory(name) = Δz .* vec(sum(vertical[name][top_face:end, :]; dims = 1))
+
+    phytoplankton = inventory(:P)
+    zooplankton = inventory(:Z)
+    inorganic = inventory(:NO₃) .+ inventory(:NH₄)
+    living = phytoplankton .+ zooplankton
+    detrital = inventory(:sPOM) .+ inventory(:bPOM)
+    dissolved_organic = inventory(:DOM)
+    total = inorganic .+ living .+ detrital .+ dissolved_organic
+    zoo_fraction = fraction(zooplankton, living)
+    return (; inorganic, living, detrital, dissolved_organic,
+              phytoplankton, zooplankton, total, zoo_fraction)
+end
+
 function diagnose_column(filename, model)
     grid = model.grid
     profiles = (; (name => FieldTimeSeries(filename, string(name)) for name in tracers)...)
@@ -85,15 +121,17 @@ function diagnose_column(filename, model)
     # Area-normalised total nitrogen inventory (mmol N/m²), all seven pools.
     Δz = grid.Lz / grid.Nz
     z = [-grid.Lz + (k - 0.5) * Δz for k in 1:grid.Nz]
-    vertical_P = vertical_tracer(:P)
-    vertical_Z = vertical_tracer(:Z)
-    vertical_NO₃ = vertical_tracer(:NO₃)
-    vertical_sPOM = vertical_tracer(:sPOM)
-    vertical_bPOM = vertical_tracer(:bPOM)
-    vertical_DOM = vertical_tracer(:DOM)
-    nitrogen_inventory = [Δz * sum(profiles[name][n][1, 1, k]
-                                      for name in tracers for k in 1:grid.Nz)
-                          for n in eachindex(times)]
+    vertical = (; (name => vertical_tracer(name) for name in tracers)...)
+    vertical_P, vertical_Z, vertical_NO₃ = vertical.P, vertical.Z, vertical.NO₃
+    vertical_sPOM, vertical_bPOM, vertical_DOM = vertical.sPOM, vertical.bPOM, vertical.DOM
+    nitrogen_inventory = Δz .* vec(sum(vertical.NO₃ .+ vertical.NH₄ .+
+                                      vertical.P .+ vertical.Z .+ vertical.DOM .+
+                                      vertical.sPOM .+ vertical.bPOM; dims = 1))
+    upper_100m = upper_nitrogen_partition(vertical, Δz, face_index(grid, 100))
+    living_fraction = living_particulate_fraction(vertical_P, vertical_Z,
+                                                  vertical_sPOM, vertical_bPOM)
+    dissolved_fraction = dissolved_organic_fraction(vertical_DOM, vertical_P, vertical_Z,
+                                                    vertical_sPOM, vertical_bPOM)
 
     function export_at(depth)
         k = face_index(grid, depth)
@@ -134,6 +172,7 @@ function diagnose_column(filename, model)
     return (; times, day = times ./ days, z,
               vertical_P, vertical_Z, vertical_NO₃,
               vertical_sPOM, vertical_bPOM, vertical_DOM,
+              upper_100m, living_fraction, dissolved_fraction,
               surface_P, surface_NO₃, export_100, export_300, export_profile,
               nitrogen_inventory, bottom_loss, budget_residual)
 end
@@ -145,13 +184,17 @@ function write_diagnostics(filename, d)
                           "export_100_m_mg_C_m2_day", "export_300_m_mg_C_m2_day",
                           "cumulative_100_m_g_C_m2", "cumulative_300_m_g_C_m2",
                           "nitrogen_inventory_mmol_N_m2", "bottom_loss_mmol_N_m2",
-                          "nitrogen_budget_residual_mmol_N_m2"), ','))
+                          "nitrogen_budget_residual_mmol_N_m2",
+                          "upper_100m_inorganic_mmol_N_m2", "upper_100m_living_mmol_N_m2",
+                          "upper_100m_detrital_mmol_N_m2", "upper_100m_DOM_mmol_N_m2"), ','))
         for i in eachindex(d.times)
             println(io, join((d.day[i], d.surface_P[i], d.surface_NO₃[i],
                               d.export_100.daily_mg_C[i], d.export_300.daily_mg_C[i],
                               d.export_100.cumulative_g_C[i], d.export_300.cumulative_g_C[i],
                               d.nitrogen_inventory[i], d.bottom_loss[i],
-                              d.budget_residual[i]), ','))
+                              d.budget_residual[i],
+                              d.upper_100m.inorganic[i], d.upper_100m.living[i],
+                              d.upper_100m.detrital[i], d.upper_100m.dissolved_organic[i]), ','))
         end
     end
     return filename

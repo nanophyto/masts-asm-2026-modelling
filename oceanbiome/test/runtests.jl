@@ -3,7 +3,8 @@ using OceanBioME, Oceananigans
 using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
                      face_index, downward_nitrogen_flux, cumulative_trapezoid,
                      carbon_flux_mg_per_day, carbon_export_g_per_m2,
-                     martin_flux, fit_martin_exponent
+                     martin_flux, fit_martin_exponent,
+                     living_particulate_fraction, dissolved_organic_fraction, upper_nitrogen_partition
 
 @testset "Workshop Julia environment" begin
     @test v"1.10" <= VERSION < v"2"
@@ -91,4 +92,28 @@ end
     depths = [100, 200, 300, 500]
     @test fit_martin_exponent(depths, martin_flux.(depths, 10.0, 0.858)) ≈ 0.858
     @test isnothing(fit_martin_exponent(depths, [10.0, 5.0, 0.0, 1.0]))
+end
+
+@testset "Nitrogen partitions and living fraction" begin
+    fields = (; NO₃ = fill(2.0, 4, 3), NH₄ = fill(1.0, 4, 3),
+               P = fill(0.5, 4, 3), Z = fill(0.25, 4, 3),
+               sPOM = fill(0.75, 4, 3), bPOM = fill(1.0, 4, 3),
+               DOM = fill(0.25, 4, 3))
+    # Integrate the top two 5 m cells: 10 m multiplied by each concentration.
+    n = upper_nitrogen_partition(fields, 5.0, 3)
+    @test n.inorganic == fill(30.0, 3)
+    @test n.living == fill(7.5, 3)
+    @test n.detrital == fill(17.5, 3)
+    @test n.dissolved_organic == fill(2.5, 3)
+    @test n.total == fill(57.5, 3)
+    @test n.zoo_fraction ≈ fill(1 / 3, 3)
+
+    fractions = living_particulate_fraction([1.0, 0.0], [1.0, 0.0],
+                                            [1.0, 0.0], [1.0, 0.0])
+    @test fractions[1] == 0.5
+    @test isnan(fractions[2])  # Undefined when particulate nitrogen is absent.
+    organic = dissolved_organic_fraction([1.0, 0.0], [1.0, 0.0],
+                                          [0.0, 0.0], [0.0, 0.0], [0.0, 0.0])
+    @test organic[1] == 0.5
+    @test isnan(organic[2])
 end

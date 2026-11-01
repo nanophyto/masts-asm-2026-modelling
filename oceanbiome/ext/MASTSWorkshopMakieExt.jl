@@ -40,6 +40,87 @@ function MASTSWorkshop.plot_vertical_evolution(control, filename::AbstractString
     return filename
 end
 
+# The seven tracers form four complementary nitrogen categories in the upper 100 m.
+function MASTSWorkshop.plot_nitrogen_partition(d, filename::AbstractString)
+    nitrogen = d.upper_100m
+    categories = (("Inorganic (NO₃ + NH₄)", nitrogen.inorganic, :steelblue),
+                  ("Living (P + Z)", nitrogen.living, :seagreen),
+                  ("Detrital (sPOM + bPOM)", nitrogen.detrital, :darkorange),
+                  ("Dissolved organic (DOM)", nitrogen.dissolved_organic, :mediumpurple))
+
+    figure = Figure(size = (1450, 530), fontsize = 15)
+    inventory = Axis(figure[1, 1]; title = "Upper 100 m nitrogen inventory",
+                     xlabel = "Day", ylabel = "mmol N m⁻²")
+    fractions = Axis(figure[1, 2]; title = "Upper 100 m nitrogen partition",
+                     xlabel = "Day", ylabel = "Share of total N (%)")
+
+    lower_inventory = zeros(length(d.day))
+    lower_fraction = zeros(length(d.day))
+    for (label, values, color) in categories
+        top_inventory = lower_inventory .+ values
+        band!(inventory, d.day, lower_inventory, top_inventory; color, label)
+        lower_inventory = top_inventory
+
+        fraction = 100 .* values ./ nitrogen.total
+        top_fraction = lower_fraction .+ fraction
+        band!(fractions, d.day, lower_fraction, top_fraction; color)
+        lower_fraction = top_fraction
+    end
+    ylims!(fractions, 0, 100)
+    axislegend(inventory; position = :rt, framevisible = false)
+    save(filename, figure)
+    return filename
+end
+
+# Compare living and dissolved-organic shares with particulate abundance.
+function MASTSWorkshop.plot_living_fraction(d, filename::AbstractString)
+    particulate = d.vertical_P .+ d.vertical_Z .+ d.vertical_sPOM .+ d.vertical_bPOM
+    figure = Figure(size = (1650, 530), fontsize = 15)
+
+    living_axis = Axis(figure[1, 1]; title = "Living fraction of particulate N",
+                       xlabel = "Day", ylabel = "Depth (m)")
+    living_map = heatmap!(living_axis, d.day, d.z, permutedims(100 .* d.living_fraction);
+                          colormap = :viridis, colorrange = (0, 100))
+    Colorbar(figure[1, 2], living_map; label = "Living (%)")
+
+    dissolved_axis = Axis(figure[1, 3]; title = "Dissolved fraction of organic N",
+                          xlabel = "Day", ylabel = "Depth (m)")
+    dissolved_map = heatmap!(dissolved_axis, d.day, d.z,
+                             permutedims(100 .* d.dissolved_fraction);
+                             colormap = :viridis, colorrange = (0, 100))
+    Colorbar(figure[1, 4], dissolved_map; label = "DOM (%)")
+
+    amount_axis = Axis(figure[1, 5]; title = "Total particulate N",
+                       xlabel = "Day", ylabel = "Depth (m)")
+    amount_map = heatmap!(amount_axis, d.day, d.z, permutedims(particulate))
+    Colorbar(figure[1, 6], amount_map; label = "mmol N m⁻³")
+
+    save(filename, figure)
+    return filename
+end
+
+# Examine the response of upper-ocean phytoplankton and zooplankton biomass.
+function MASTSWorkshop.plot_plankton_balance(control, reduced, filename::AbstractString)
+    matching_times(control, reduced)
+    metrics = (("Phytoplankton", "mmol N m⁻²", d -> d.upper_100m.phytoplankton),
+               ("Zooplankton", "mmol N m⁻²", d -> d.upper_100m.zooplankton),
+               ("Zooplankton share", "% of P + Z", d -> 100 .* d.upper_100m.zoo_fraction))
+    figure = Figure(size = (1320, 1050), fontsize = 15)
+    for (row, (title, unit, metric)) in enumerate(metrics)
+        axis = Axis(figure[row, 1]; title, xlabel = "Day", ylabel = unit)
+        compare_lines!(axis, control, reduced, metric)
+        axislegend(axis; position = :rt, framevisible = false)
+
+        difference_axis = Axis(figure[row, 2]; title = "Change in $title",
+                               xlabel = "Day", ylabel = "Reduced − control ($unit)")
+        lines!(difference_axis, control.day, metric(reduced) .- metric(control);
+               color = orange, linewidth = 2.5)
+        hlines!(difference_axis, [0.0]; color = :gray, linestyle = :dot)
+    end
+    save(filename, figure)
+    return filename
+end
+
 # Plot the two sinking-flux horizons for a single reference simulation.
 function MASTSWorkshop.plot_reference_export(reference, filename::AbstractString)
     figure = Figure(size = (1100, 700), fontsize = 15)

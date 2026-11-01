@@ -19,7 +19,7 @@ using OceanBioME, Oceananigans
 using Oceananigans.Units
 using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
                      diagnose_column, write_diagnostics, write_export_profile,
-                     plot_grazing_response, plot_carbon_export
+                     plot_grazing_response, plot_plankton_balance, plot_carbon_export
 
 # ## Configure the water column
 #
@@ -102,6 +102,21 @@ end
 
 #md # WORKSHOP_GRAZING_FIGURE
 
+# ## Compare phytoplankton and zooplankton
+#
+# The upper-100 m phytoplankton and zooplankton nitrogen inventories show
+# how changing grazing redistributes living biomass. The zooplankton share,
+# Z / (P + Z), is a bounded alternative to a potentially very large Z:P ratio.
+# Compare both experiments and their differences through the annual cycle.
+
+if make_plots
+    filename = joinpath(output_dir, "grazing_plankton_balance.png")
+    plot_plankton_balance(results["control"], results["reduced_grazing"], filename)
+    println("Saved $filename")
+end
+
+#md # WORKSHOP_PLANKTON_BALANCE_FIGURE
+
 # ## Plot particulate carbon export
 #
 # Instantaneous and cumulative fluxes are shown at 100 m and 300 m, with
@@ -119,6 +134,8 @@ end
 
 # ## Interpret the results
 #
+# Compare the phytoplankton and zooplankton inventories and their ratio.
+# Does reduced grazing change the share of zooplankton in living biomass?
 # Compare the phytoplankton response with export at each depth. Does a change
 # in surface biomass produce a proportional change in carbon export? How does
 # the cumulative flux differ from the instantaneous flux?
