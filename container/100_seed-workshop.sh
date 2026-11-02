@@ -8,6 +8,11 @@ workspace="$home_dir/masts-asm-2026-modelling"
 
 id "$username" >/dev/null
 
+# A new persistent home volume may be owned by root. Give the workstation
+# account ownership of the home directory while preserving existing files.
+mkdir -p "$home_dir"
+chown "$(id -u "$username"):$(id -g "$username")" "$home_dir"
+
 # Seed editable examples once per participant; preserve subsequent edits.
 if [[ ! -f "$workspace/README.md" ]]; then
     runuser -u "$username" -- mkdir -p "$workspace"
