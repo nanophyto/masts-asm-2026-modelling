@@ -14,6 +14,8 @@ ARG JULIA_EXTENSION_VERSION=1.250.2
 ARG PYTHON_EXTENSION_VERSION=2026.4.0
 # Set to 1 for an experimental, portable scientific sysimage benchmark.
 ARG BUILD_WORKSHOP_SYSIMAGE=0
+# Image-codegen threads differ from JULIA_NUM_THREADS; 1 reduces peak RAM.
+ARG SYSIMAGE_IMAGE_THREADS=1
 
 LABEL org.opencontainers.image.title="MASTS ASM 2026 modelling workshop" \
       org.opencontainers.image.description="OceanBioME.jl and Abil.py with Code OSS for Cloud Workstations" \
@@ -106,14 +108,22 @@ RUN mkdir -p /home/user/masts-asm-2026-modelling \
 # Build-time JIT optimisation is opt-in until it has been timed and validated
 # on the actual amd64 workstation machine type. PackageCompiler is isolated
 # from the scientific Project/Manifest, which remain Julia 1.10 and editable.
-RUN if [ "$BUILD_WORKSHOP_SYSIMAGE" = "1" ]; then \
+RUN set -eu; \
+    if [ "$BUILD_WORKSHOP_SYSIMAGE" = "1" ]; then \
       apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*; \
       mkdir -p /opt/workshop/sysimages /opt/workshop/sysimage-build; \
-      JULIA_DEPOT_PATH=/opt/workshop/julia-depot /opt/julia/bin/julia --startup-file=no \
+      MASTS_MEMORY_PHASE=packagecompiler-install JULIA_PKG_PRECOMPILE_AUTO=0 \
+      JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
+        /opt/workshop/python/bin/python container/measure_sysimage_memory.py -- \
+        /opt/julia/bin/julia --startup-file=no \
         -e 'using Pkg; Pkg.activate("/opt/workshop/sysimage-build"); Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="2.2.5"))'; \
-      JULIA_DEPOT_PATH=/opt/workshop/julia-depot /opt/julia/bin/julia \
-        --threads=1 --startup-file=no --project=/opt/workshop/sysimage-build \
-        container/build_workshop_sysimage.jl; \
+      MASTS_MEMORY_PHASE=create-sysimage \
+      JULIA_IMAGE_THREADS="$SYSIMAGE_IMAGE_THREADS" JULIA_IMAGE_TIMINGS=1 \
+      JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
+        /opt/workshop/python/bin/python container/measure_sysimage_memory.py -- \
+        /opt/julia/bin/julia --threads=1 --startup-file=no \
+        --project=/opt/workshop/sysimage-build container/build_workshop_sysimage.jl; \
+      test -s /opt/workshop/sysimages/masts-workshop.so; \
       JULIA_DEPOT_PATH=/opt/workshop/julia-depot /opt/workshop/bin/julia \
         --startup-file=no --project=oceanbiome \
         -e 'using OceanBioME, Oceananigans, CairoMakie'; \

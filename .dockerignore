@@ -6,6 +6,7 @@ __pycache__
 *.jld2
 *.nc
 *.zip
+*.log
 
 # Local environment and ephemeral documentation outputs
 **/Manifest.toml.bak

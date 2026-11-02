@@ -230,12 +230,48 @@ OceanBioME, Oceananigans and CairoMakie. The editable `MASTSWorkshop` package
 is loaded from the participant workspace, so students can change workshop
 code. The compiler is in a separate build-only environment.
 
+The optional build uses `JULIA_IMAGE_THREADS=1` for Julia's native image
+code generation, independently of `JULIA_NUM_THREADS=1`. The build also prints
+image-compilation timings and measures peak cgroup memory separately for
+PackageCompiler installation and system-image compilation, including child
+processes. Installation skips eager package precompilation to reduce memory
+pressure.
+
+**Run the first memory measurement on the 128 GB Linux workstation** from the
+same source revision as the tested ordinary image. Save the complete plain-text
+build log:
+
 ```bash
-docker build --platform linux/amd64 --build-arg BUILD_WORKSHOP_SYSIMAGE=1 \
-  -f container/Dockerfile -t masts-asm-2026-modelling:sysimage .
+set -o pipefail
+docker build --platform linux/amd64 --progress=plain \
+  --build-arg BUILD_WORKSHOP_SYSIMAGE=1 \
+  --build-arg SYSIMAGE_IMAGE_THREADS=1 \
+  -f container/Dockerfile \
+  -t masts-asm-2026-modelling:sysimage . 2>&1 | tee sysimage-build.log
+grep '\[sysimage-memory\]' sysimage-build.log
+```
+
+The `[sysimage-memory]` lines identify the `packagecompiler-install` and
+`create-sysimage` phases and report elapsed time, sampled peak cgroup usage,
+Linux's lifetime cgroup peak, and any cgroup memory limit, in MiB. The sampled
+peak covers each phase; the lifetime peak may include earlier commands from the
+same Docker `RUN`. These measure the build container's total
+memory, including subprocesses, unlike a single Julia process's maximum RSS.
+If the builder does not expose cgroup memory accounting, the output says
+`unavailable` explicitly. A successful 128 GB build establishes the memory
+requirement before testing a constrained builder on smaller hardware.
+
+After a successful build, verify cold-run speed and scientific outputs:
+
+```bash
 ./scripts/benchmark_container_startup.sh masts-asm-2026-modelling:sysimage
 ./scripts/test_container.sh masts-asm-2026-modelling:sysimage
 ```
+
+If the reported peak remains high, the next controlled experiment is a smaller
+precompile workload (scientific calculations before full CairoMakie plotting).
+The ordinary image remains available with `BUILD_WORKSHOP_SYSIMAGE=0` and uses
+the same science environment.
 
 `/opt/workshop/bin/julia` automatically selects the sysimage if present. The
 VS Code Julia executable setting points to the same wrapper; the language
