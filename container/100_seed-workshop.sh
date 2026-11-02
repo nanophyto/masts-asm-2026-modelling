@@ -26,3 +26,22 @@ if [[ ! -f "$settings_dir/settings.json" ]]; then
     sed "s|__WORKSPACE__|$workspace|g" /opt/workshop/workspace-settings.json \
         | runuser -u "$username" -- tee "$settings_dir/settings.json" >/dev/null
 fi
+
+# Google Code OSS reads machine-wide defaults from this persistent-home path.
+# Install missing defaults for fresh and existing volumes before IDE startup,
+# leaving any already customised setting intact.
+editor_root="$home_dir/.codeoss-cloudworkstations"
+editor_data="$editor_root/data"
+machine_dir="$editor_data/Machine"
+mkdir -p "$machine_dir"
+chown "$(id -u "$username"):$(id -g "$username")" "$editor_root" "$editor_data" "$machine_dir"
+runuser -u "$username" -- /opt/workshop/python/bin/python \
+    /opt/workshop/configure_editor.py merge-defaults \
+    /opt/workshop/machine-settings.json "$machine_dir/settings.json"
+
+# Remove optional Google AI extensions retained in a participant's persistent
+# editor profile from earlier image versions. The Julia extension is preserved.
+if [[ -d "$editor_root/extensions" ]]; then
+    runuser -u "$username" -- /opt/workshop/python/bin/python \
+        /opt/workshop/configure_editor.py remove-google-ai "$editor_root/extensions"
+fi

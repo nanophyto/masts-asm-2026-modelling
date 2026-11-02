@@ -21,6 +21,7 @@ docker run --rm \
     "$image" -euc '
         cd /opt/workshop/source
         python -m unittest discover -s abil/tests -p "test_*.py" -v
+        python container/test_editor_configuration.py -v
         julia --threads=1 --startup-file=no --project=oceanbiome -e \
           "using MASTSWorkshop, CairoMakie; @assert Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt) !== nothing"
         for trial in 1 2; do

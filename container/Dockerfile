@@ -7,6 +7,7 @@ FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:la
 ARG TARGETARCH
 ARG SOURCE_REPOSITORY=""
 ARG JULIA_EXTENSION_VERSION=1.219.2
+ARG PYTHON_EXTENSION_VERSION=2026.4.0
 
 LABEL org.opencontainers.image.title="MASTS ASM 2026 modelling workshop" \
       org.opencontainers.image.description="OceanBioME.jl and Abil.py with Code OSS for Cloud Workstations" \
@@ -41,21 +42,29 @@ RUN curl -fL --retry 4 --retry-delay 2 \
     && rm /tmp/miniforge.sh \
     && /opt/miniforge/bin/conda clean -afy
 
-# Pre-install the Julia extension in Code OSS, so sessions don't require
-# marketplace access or per-participant installation.
-RUN curl -fL --retry 4 --retry-delay 2 \
-      "https://open-vsx.org/api/julialang/language-julia/${JULIA_EXTENSION_VERSION}/file/julialang.language-julia-${JULIA_EXTENSION_VERSION}.vsix" \
-      -o /tmp/julia-extension.vsix \
-    && mkdir -p /tmp/julia-extension \
-    && unzip -q /tmp/julia-extension.vsix 'extension/*' -d /tmp/julia-extension \
-    && mv /tmp/julia-extension/extension /opt/code-oss/extensions/julia \
-    && chmod -R a+rX /opt/code-oss/extensions/julia \
-    && rm -rf /tmp/julia-extension /tmp/julia-extension.vsix
-
 # Keep the runnable package environment and precompiled dependencies outside
 # /home: Cloud Workstations mounts a persistent home volume at startup.
 COPY . /opt/workshop/source
 WORKDIR /opt/workshop/source
+
+# Pin the language extensions and store the archives in the image. The user's
+# persistent /home/user volume hides anything installed there at build time,
+# so the 120_ startup task installs these from the local files using the Code
+# OSS CLI. This requires no marketplace connection at participant login.
+RUN mkdir -p /opt/workshop/vsix \
+    && curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/julialang/language-julia/${JULIA_EXTENSION_VERSION}/file/julialang.language-julia-${JULIA_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/julia.vsix \
+    && curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/ms-python/python/${PYTHON_EXTENSION_VERSION}/file/ms-python.python-${PYTHON_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/python.vsix \
+    && /opt/workshop/python/bin/python container/ensure_language_extensions.py verify /opt/workshop/vsix
+
+
+# The Google base includes Cloud Code (and hence Gemini); workshop users
+# need the editor, terminal and Julia language extension, not cloud AI tools.
+RUN /opt/workshop/python/bin/python container/configure_editor.py remove-google-ai /opt/code-oss/extensions \
+    && /opt/workshop/python/bin/python container/configure_editor.py remove-google-ai /opt/code-oss/resources/app/extensions
 
 RUN /opt/workshop/python/bin/python -m pip install --no-cache-dir -r abil/requirements.txt \
     && /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_*.py' -v
@@ -71,7 +80,11 @@ RUN mkdir -p /opt/workshop/julia-depot \
 # Executed by Google's standard entrypoint after user creation and before
 # Code OSS starts. The base entrypoint and editor scripts stay unchanged.
 COPY container/100_seed-workshop.sh /etc/workstation-startup.d/100_seed-workshop.sh
+COPY container/120_install_language_extensions.sh /etc/workstation-startup.d/120_install_language_extensions.sh
 COPY container/workspace-settings.json /opt/workshop/workspace-settings.json
-RUN chmod +x /etc/workstation-startup.d/100_seed-workshop.sh
+COPY container/machine-settings.json /opt/workshop/machine-settings.json
+COPY container/configure_editor.py /opt/workshop/configure_editor.py
+COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
+RUN chmod +x /etc/workstation-startup.d/100_seed-workshop.sh /etc/workstation-startup.d/120_install_language_extensions.sh
 
 EXPOSE 80
