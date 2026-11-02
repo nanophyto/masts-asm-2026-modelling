@@ -9,6 +9,17 @@ Two complementary introductions to modelling in marine biogeochemistry:
 
 The exercises are ordinary Python and Julia scripts intended to remain useful after the workshop.
 
+### Workstation first-run preparation
+
+The combined Docker image can pre-warm the Julia editor environments and run
+the two-day reference column once per participant's persistent workstation
+home. Enable `MASTS_WARMUP_ON_START=1` in the Cloud Workstations container
+configuration and start the instances before the session. Check readiness with
+`python /opt/workshop/warmup_workstation.py status` inside a workstation.
+An optional PackageCompiler sysimage build and a cold-run comparison are
+available in [container/README.md](container/README.md); these keep the
+Julia 1.10 scientific environment and Julia 1.11 editor runtime separate.
+
 ## Set up and test the environment (Cycle 1.1)
 
 Install **Julia 1.10** and create a dedicated **Python 3.11** environment

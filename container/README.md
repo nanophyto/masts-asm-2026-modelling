@@ -167,3 +167,88 @@ julia --project=oceanbiome oceanbiome/exercises/00_reference_column.jl --quick
 ```
 
 The script writes figures and diagnostics into `outputs/oceanbiome/`.
+
+## Early workstation preparation and scientific startup timing (Cycle 1.6)
+
+The Julia extension has its own Julia 1.11 language-server and indexing
+processes. In the 2 November local browser log, the language-server
+precompilation itself took **230 seconds**, followed by symbol-cache downloads.
+This occurs in the participant's persistent editor profile, separately from
+scientific compilation. Launching Cloud Workstations early lets these processes
+finish before the workshop opens.
+
+### Prepare each participant account when its workstation starts
+
+Set `MASTS_WARMUP_ON_START=1` as a container environment variable in the
+Cloud Workstations configuration (or via `docker run -e`). Google's existing
+container entrypoint executes `210_warmup_workstation.sh` *after* the
+extension-installation stage. The script starts preparation as the `user`
+account in the background and immediately returns control to Code OSS.
+It performs these steps sequentially:
+
+1. Run the image's tested `00_reference_column.jl --quick` with Julia 1.10,
+   writing figures and diagnostics into `~/.cache/masts-workshop/reference-output`.
+   The participant's editable files are never executed automatically.
+2. Precompile the Julia 1.11 language-server environment from the installed
+   Julia extension, into the participant's persistent Julia depot.
+3. Precompile the Julia 1.10 VS Code terminal-server environment, when present.
+
+It runs once per image/science version. An exclusive file lock prevents
+parallel warm-ups, and the completion marker is written only after all steps
+succeed. Participant exercises, edits and the normal `outputs/` directory are
+preserved. Failed preparation is recorded and retried on the next startup.
+
+For a local Docker rehearsal, with the image built:
+
+```bash
+docker run --privileged --rm -p 127.0.0.1:8080:80 \
+  -e MASTS_WARMUP_ON_START=1 \
+  -v masts-workshop-home:/home/user \
+  masts-asm-2026-modelling:local
+```
+
+Monitor preparation from the workstation terminal:
+
+```bash
+python /opt/workshop/warmup_workstation.py status
+tail -f ~/.cache/masts-workshop/warmup.log
+```
+
+The status becomes `ready` after the two-day run has produced its output.
+Cloud operators should start all participant workstations early and verify
+`ready` before sharing launch links. Precompilation of the package index and
+symbol downloads may still be performed by the language-server process when
+participants first open the workspace. Running the quick example in a
+separate process also does not preserve all JIT-compiled methods by itself.
+
+### Optional shared science sysimage
+
+To reduce compilation across separate Julia processes, test an image built
+with PackageCompiler 2.2.5. It uses `00_reference_column.jl --quick` as a
+precompile workload and builds a portable generic x86-64 sysimage containing
+OceanBioME, Oceananigans and CairoMakie. The editable `MASTSWorkshop` package
+is loaded from the participant workspace, so students can change workshop
+code. The compiler is in a separate build-only environment.
+
+```bash
+docker build --platform linux/amd64 --build-arg BUILD_WORKSHOP_SYSIMAGE=1 \
+  -f container/Dockerfile -t masts-asm-2026-modelling:sysimage .
+./scripts/benchmark_container_startup.sh masts-asm-2026-modelling:sysimage
+./scripts/test_container.sh masts-asm-2026-modelling:sysimage
+```
+
+`/opt/workshop/bin/julia` automatically selects the sysimage if present. The
+VS Code Julia executable setting points to the same wrapper; the language
+server continues using `/opt/julia-ls/bin/julia` on Julia 1.11.9. Compare
+run time and peak memory with the non-sysimage case using the benchmark. Set
+`MASTS_USE_SYSIMAGE=0` to run plain Julia 1.10, including when investigating
+an extension or compilation issue. Regular builds default to
+`BUILD_WORKSHOP_SYSIMAGE=0` until the optional image is validated on the
+actual workstation architecture and shown to improve first-run performance.
+PackageCompiler can significantly increase build time, memory use and image
+size. Its baked dependency versions follow the pinned scientific environment.
+
+For the 4 November rehearsal, a validated ordinary image with early per-user
+warm-up is the minimum viable configuration. Enable the sysimage for the
+workshop once both cold and warm runs, diagnostics, and scientific figures pass
+and its speed-up is confirmed.

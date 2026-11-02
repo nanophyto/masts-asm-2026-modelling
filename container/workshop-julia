@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# A compiled science sysimage is optional. Keep Julia 1.10 and regular package
+# resolution available if the sysimage is absent or deliberately disabled.
+real_julia="${MASTS_REAL_JULIA:-/opt/julia/bin/julia}"
+sysimage="${MASTS_SYSIMAGE:-/opt/workshop/sysimages/masts-workshop.so}"
+for arg in "$@"; do
+    case "$arg" in
+        -J|--sysimage|-J*|--sysimage=*) exec "$real_julia" "$@" ;;
+    esac
+done
+if [[ "${MASTS_USE_SYSIMAGE:-1}" != "0" && -f "$sysimage" ]]; then
+    exec "$real_julia" --sysimage="$sysimage" "$@"
+fi
+exec "$real_julia" "$@"

@@ -12,6 +12,8 @@ ARG TARGETARCH
 ARG SOURCE_REPOSITORY=""
 ARG JULIA_EXTENSION_VERSION=1.250.2
 ARG PYTHON_EXTENSION_VERSION=2026.4.0
+# Set to 1 for an experimental, portable scientific sysimage benchmark.
+ARG BUILD_WORKSHOP_SYSIMAGE=0
 
 LABEL org.opencontainers.image.title="MASTS ASM 2026 modelling workshop" \
       org.opencontainers.image.description="OceanBioME.jl and Abil.py with Code OSS for Cloud Workstations" \
@@ -23,7 +25,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONNOUSERSITE=1 \
     JULIA_DEPOT_PATH=/home/user/.julia:/opt/workshop/julia-depot \
-    PATH=/opt/workshop/python/bin:/opt/julia/bin:${PATH}
+    PATH=/opt/workshop/python/bin:/opt/workshop/bin:/opt/julia/bin:${PATH}
 
 # Miniforge's bundled Python is independent of the base editor's Python.
 # This installer is pinned and checksum-verified.
@@ -54,6 +56,8 @@ RUN curl -fL --retry 4 --retry-delay 2 \
 # Keep the runnable package environment and precompiled dependencies outside
 # /home: Cloud Workstations mounts a persistent home volume at startup.
 COPY . /opt/workshop/source
+COPY container/workshop-julia /opt/workshop/bin/julia
+RUN chmod +x /opt/workshop/bin/julia
 WORKDIR /opt/workshop/source
 
 # Pin the language extensions and store the archives in the image. The user's
@@ -99,14 +103,32 @@ RUN mkdir -p /home/user/masts-asm-2026-modelling \
        -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))' \
     && rm -rf /home/user/masts-asm-2026-modelling
 
+# Build-time JIT optimisation is opt-in until it has been timed and validated
+# on the actual amd64 workstation machine type. PackageCompiler is isolated
+# from the scientific Project/Manifest, which remain Julia 1.10 and editable.
+RUN if [ "$BUILD_WORKSHOP_SYSIMAGE" = "1" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*; \
+      mkdir -p /opt/workshop/sysimages /opt/workshop/sysimage-build; \
+      JULIA_DEPOT_PATH=/opt/workshop/julia-depot /opt/julia/bin/julia --startup-file=no \
+        -e 'using Pkg; Pkg.activate("/opt/workshop/sysimage-build"); Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="2.2.5"))'; \
+      JULIA_DEPOT_PATH=/opt/workshop/julia-depot /opt/julia/bin/julia \
+        --threads=1 --startup-file=no --project=/opt/workshop/sysimage-build \
+        container/build_workshop_sysimage.jl; \
+      JULIA_DEPOT_PATH=/opt/workshop/julia-depot /opt/workshop/bin/julia \
+        --startup-file=no --project=oceanbiome \
+        -e 'using OceanBioME, Oceananigans, CairoMakie'; \
+    fi
+
 # Executed by Google's standard entrypoint after user creation and before
 # Code OSS starts. The base entrypoint and editor scripts stay unchanged.
 COPY container/100_seed-workshop.sh /etc/workstation-startup.d/100_seed-workshop.sh
 COPY container/120_install_language_extensions.sh /etc/workstation-startup.d/120_install_language_extensions.sh
+COPY container/210_warmup_workstation.sh /etc/workstation-startup.d/210_warmup_workstation.sh
+COPY container/warmup_workstation.py /opt/workshop/warmup_workstation.py
 COPY container/workspace-settings.json /opt/workshop/workspace-settings.json
 COPY container/machine-settings.json /opt/workshop/machine-settings.json
 COPY container/configure_editor.py /opt/workshop/configure_editor.py
 COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
-RUN chmod +x /etc/workstation-startup.d/100_seed-workshop.sh /etc/workstation-startup.d/120_install_language_extensions.sh
+RUN chmod +x /etc/workstation-startup.d/100_seed-workshop.sh /etc/workstation-startup.d/120_install_language_extensions.sh /etc/workstation-startup.d/210_warmup_workstation.sh
 
 EXPOSE 80

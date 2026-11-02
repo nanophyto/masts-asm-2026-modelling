@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import sys
@@ -45,6 +46,23 @@ def merge_defaults(defaults_path: Path, settings_path: Path) -> None:
             os.unlink(temp_path)
 
 
+def migrate_workshop_julia_executable(settings_path: Path) -> None:
+    """Migrate only the prior image's default Julia executable in saved workspaces.
+
+    Preserve JSON-with-comments formatting and other participant preferences.
+    The wrapper uses the original Julia binary when no sysimage exists.
+    """
+    if not settings_path.is_file():
+        return
+    original = settings_path.read_text(encoding="utf-8")
+    updated = re.sub(
+        r'("julia\.executablePath"\s*:\s*)"/opt/julia/bin/julia"',
+        r'\1"/opt/workshop/bin/julia"', original,
+    )
+    if updated != original:
+        settings_path.write_text(updated, encoding="utf-8")
+
+
 def remove_google_ai_extensions(extensions_dir: Path) -> list[str]:
     """Remove bundled Google Cloud Code/Gemini integrations, preserving other extensions."""
     removed = []
@@ -74,10 +92,12 @@ def remove_google_ai_extensions(extensions_dir: Path) -> list[str]:
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "merge-defaults":
         merge_defaults(Path(sys.argv[2]), Path(sys.argv[3]))
+    elif len(sys.argv) == 3 and sys.argv[1] == "migrate-workspace-julia":
+        migrate_workshop_julia_executable(Path(sys.argv[2]))
     elif len(sys.argv) == 3 and sys.argv[1] == "remove-google-ai":
         removed = remove_google_ai_extensions(Path(sys.argv[2]))
         print("Removed optional Google editor extensions: " +
               (", ".join(removed) if removed else "none found"))
     else:
         sys.exit("Usage: configure_editor.py merge-defaults DEFAULTS SETTINGS | "
-                 "remove-google-ai EXTENSIONS_DIR")
+                 "migrate-workspace-julia SETTINGS | remove-google-ai EXTENSIONS_DIR")

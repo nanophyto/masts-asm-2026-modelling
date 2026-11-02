@@ -21,7 +21,7 @@ docker run --rm \
     "$image" -euc '
         cd /opt/workshop/source
         python -m unittest discover -s abil/tests -p "test_*.py" -v
-        python container/test_editor_configuration.py -v
+        python -m unittest discover -s container -p "test_*.py" -v
         # The Julia extension uses 1.11 for its language server, while the
         # scientific scripts and terminal keep Julia 1.10.
         julia --startup-file=no -e "@assert VERSION == v\"1.10.12\""

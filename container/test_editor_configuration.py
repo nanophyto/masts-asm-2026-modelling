@@ -8,7 +8,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from configure_editor import merge_defaults, remove_google_ai_extensions
+from configure_editor import merge_defaults, migrate_workshop_julia_executable, remove_google_ai_extensions
 from ensure_language_extensions import EXTENSIONS, ensure_extensions, verify_vsix_files
 
 
@@ -51,6 +51,26 @@ class EditorConfigurationTests(unittest.TestCase):
         self.settings.write_text('{"editor.fontSize": 18, // a user comment\n}')
         merge_defaults(self.defaults, self.settings)
         self.assertIn("a user comment", self.settings.read_text())
+
+    def test_migrates_old_science_executable_without_erasing_user_settings(self):
+        workspace = self.root / "workspace/.vscode/settings.json"
+        workspace.parent.mkdir(parents=True)
+        workspace.write_text('{\n  // participant preference\n  "editor.fontSize": 18,\n'
+                             '  "julia.executablePath": "/opt/julia/bin/julia"\n}\n')
+        migrate_workshop_julia_executable(workspace)
+        result = workspace.read_text()
+        self.assertIn('"julia.executablePath": "/opt/workshop/bin/julia"', result)
+        self.assertIn('// participant preference', result)
+        self.assertIn('"editor.fontSize": 18', result)
+        migrate_workshop_julia_executable(workspace)
+        self.assertEqual(workspace.read_text(), result)
+
+    def test_respects_custom_science_executable(self):
+        workspace = self.root / "workspace/.vscode/settings.json"
+        workspace.parent.mkdir(parents=True)
+        workspace.write_text('{"julia.executablePath":"/custom/julia"}\n')
+        migrate_workshop_julia_executable(workspace)
+        self.assertIn('/custom/julia', workspace.read_text())
 
     def test_google_integrations_removed_julia_and_others_retained(self):
         base = self.root / "extensions"
@@ -104,8 +124,8 @@ class LanguageExtensionTests(unittest.TestCase):
         self.assertIn("FROM julia:1.10.12-bookworm AS julia-runtime", dockerfile)
         self.assertIn("FROM julia:1.11.9-bookworm AS julia-language-server", dockerfile)
         self.assertIn("COPY --from=julia-language-server /usr/local/julia /opt/julia-ls", dockerfile)
-        self.assertIn("PATH=/opt/workshop/python/bin:/opt/julia/bin:${PATH}", dockerfile)
-        self.assertEqual(workspace["julia.executablePath"], "/opt/julia/bin/julia")
+        self.assertIn("PATH=/opt/workshop/python/bin:/opt/workshop/bin:/opt/julia/bin:${PATH}", dockerfile)
+        self.assertEqual(workspace["julia.executablePath"], "/opt/workshop/bin/julia")
         self.assertEqual(workspace["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
         self.assertEqual(machine["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
 

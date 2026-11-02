@@ -29,6 +29,10 @@ if [[ ! -f "$settings_dir/settings.json" ]]; then
     sed "s|__WORKSPACE__|$workspace|g" /opt/workshop/workspace-settings.json \
         | runuser -u "$username" -- tee "$settings_dir/settings.json" >/dev/null
 fi
+# Existing persistent volumes may contain the previous default Julia path.
+# Migrate only that setting while preserving the participant's other edits.
+runuser -u "$username" -- /opt/workshop/python/bin/python \
+    /opt/workshop/configure_editor.py migrate-workspace-julia "$settings_dir/settings.json"
 
 # Google Code OSS reads machine-wide defaults from this persistent-home path.
 # Install missing defaults for fresh and existing volumes before IDE startup,
