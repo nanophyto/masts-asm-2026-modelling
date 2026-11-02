@@ -31,6 +31,7 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertFalse(configured["extensions.autoUpdate"])
         self.assertIs(configured["julia.juliaup.install.hint"], False)
         self.assertIs(configured["julia.symbolCacheDownload"], True)
+        self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
 
     def test_reuse_preserves_custom_settings_and_is_idempotent(self):
         self.settings.parent.mkdir(parents=True)
@@ -40,6 +41,7 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertEqual(configured["workbench.colorTheme"], "Solarized Dark")
         self.assertEqual(configured["editor.fontSize"], 18)
         self.assertTrue(configured["chat.disableAIFeatures"])
+        self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
         initial_bytes = self.settings.read_bytes()
         merge_defaults(self.defaults, self.settings)
         self.assertEqual(self.settings.read_bytes(), initial_bytes)
@@ -94,6 +96,18 @@ class LanguageExtensionTests(unittest.TestCase):
             f"ARG PYTHON_EXTENSION_VERSION={EXTENSIONS['ms-python.python'][1]}",
             dockerfile,
         )
+
+    def test_language_server_runtime_is_independent_of_science_julia(self):
+        dockerfile = Path(__file__).with_name("Dockerfile").read_text()
+        machine = json.loads(Path(__file__).with_name("machine-settings.json").read_text())
+        workspace = json.loads(Path(__file__).with_name("workspace-settings.json").read_text())
+        self.assertIn("FROM julia:1.10.12-bookworm AS julia-runtime", dockerfile)
+        self.assertIn("FROM julia:1.11.9-bookworm AS julia-language-server", dockerfile)
+        self.assertIn("COPY --from=julia-language-server /usr/local/julia /opt/julia-ls", dockerfile)
+        self.assertIn("PATH=/opt/workshop/python/bin:/opt/julia/bin:${PATH}", dockerfile)
+        self.assertEqual(workspace["julia.executablePath"], "/opt/julia/bin/julia")
+        self.assertEqual(workspace["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
+        self.assertEqual(machine["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
 
     def test_pinned_archives_identify_both_languages(self):
         verify_vsix_files(self.vsix_dir)

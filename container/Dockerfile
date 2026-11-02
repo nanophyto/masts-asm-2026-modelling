@@ -2,6 +2,10 @@
 # Julia from the official image, editor lifecycle from Google Cloud Workstations.
 FROM julia:1.10.12-bookworm AS julia-runtime
 
+# The Julia extension 1.250.2 requires Julia >=1.11 for its language server.
+# Use a separate editor-only binary while workshop science remains on 1.10.
+FROM julia:1.11.9-bookworm AS julia-language-server
+
 FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
 
 ARG TARGETARCH
@@ -32,6 +36,11 @@ RUN test "$TARGETARCH" = "amd64" \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=julia-runtime /usr/local/julia /opt/julia
+COPY --from=julia-language-server /usr/local/julia /opt/julia-ls
+
+# Verify both runtimes at build time and keep Julia 1.10 first on PATH.
+RUN /opt/julia/bin/julia --startup-file=no -e '@assert VERSION == v"1.10.12"' \
+    && /opt/julia-ls/bin/julia --startup-file=no -e '@assert VERSION == v"1.11.9"'
 
 RUN curl -fL --retry 4 --retry-delay 2 \
       https://github.com/conda-forge/miniforge/releases/download/25.3.0-3/Miniforge3-25.3.0-3-Linux-x86_64.sh \

@@ -118,3 +118,10 @@ cover the local browser editor and public image access.
 
 PR 2 establishes the Google Cloud Workstations cluster, participant access,
 and the tested image deployment.
+
+### Julia editor compatibility
+
+The workshop uses Julia 1.10.12 for simulations and Julia 1.11.9
+for Code OSS language-server indexing. Both runtimes are installed by the
+container; the Julia REPL and terminal continue to use Julia 1.10.12.
+

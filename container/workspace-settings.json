@@ -1,5 +1,6 @@
 {
   "julia.executablePath": "/opt/julia/bin/julia",
+  "julia.languageServerExecutablePath": "/opt/julia-ls/bin/julia",
   "julia.environmentPath": "__WORKSPACE__/oceanbiome",
   "julia.additionalArgs": ["--threads=1"],
   "julia.useRevise": false,

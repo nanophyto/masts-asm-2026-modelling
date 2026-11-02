@@ -1,7 +1,7 @@
 # Combined scientific image (Cycle 1.4)
 
 This image extends Google's Code OSS for Cloud Workstations base and includes
-Julia 1.10, Oceananigans, OceanBioME, CairoMakie, Python 3.11, Abil.py and the
+Julia 1.10 for science, Julia 1.11.9 for the editor language server, Oceananigans, OceanBioME, CairoMakie, Python 3.11, Abil.py and the
 MASTS workshop scripts. Julia uses one thread per column. Dependencies are
 installed during image construction, and Julia packages are precompiled.
 
@@ -84,9 +84,18 @@ installer updates already-provisioned persistent editor profiles as well as
 fresh workstations. After rebuilding and restarting the container, reload
 the browser editor and verify that `--list-extensions --show-versions`
 reports `julialang.language-julia@1.250.2`. Reopen the Julia project and
-check the language-server log while loading the reference column. This
-version update is a candidate fix; successful indexing must be confirmed
-in a live workstation.
+check the language-server log while loading the reference column.
+
+The newer extension requires Julia 1.11 or newer **for its language server**.
+The image installs a separate Julia 1.11.9 binary at `/opt/julia-ls/bin/julia`
+and configures `julia.languageServerExecutablePath` in both the workspace
+and machine defaults. `julia.executablePath`, the terminal's `julia`
+command, `.julia-version`, and all scientific precompilation remain on Julia
+1.10.12. This version pairing is checked in the Docker build and smoke tests.
+Existing participant volumes receive the machine default when they restart;
+the repository's workspace configuration also includes this setting. The
+extra Julia runtime adds image size, but leaves the tested scientific
+packages unchanged. Confirm live indexing in the browser before deploying.
 
 If a Julia editor crash notification appears while an experiment finishes, inspect
 **View > Output > Julia Language Server** (and the **Julia** output channel)
