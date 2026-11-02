@@ -7,7 +7,8 @@ inspectable alongside the biological experiments.
 
 ## Current reference column: idealised seasonal forcing
 
-The reference simulation uses a 500 m column with 100 uniform cells. Its
+The reference simulation uses a 500 m column with 50 uniform cells,
+a 30-minute time step and vertically implicit mixing. Its
 annual forcing begins in midwinter and repeats every 365 days. The
 reference tutorial spans the complete annual cycle, including spring, summer,
 autumn and winter.

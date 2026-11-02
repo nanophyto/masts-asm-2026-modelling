@@ -4,7 +4,7 @@ using Oceananigans: FieldTimeSeries
 using Oceananigans.Biogeochemistry: biogeochemical_drift_velocity
 using Oceananigans.Units: days
 
-export face_index, downward_nitrogen_flux, cumulative_trapezoid,
+export face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
        carbon_flux_mg_per_day, carbon_export_g_per_m2,
        martin_flux, fit_martin_exponent, living_particulate_fraction,
        dissolved_organic_fraction, upper_nitrogen_partition,
@@ -23,6 +23,14 @@ function face_index(grid, depth)
     isapprox(steps * Δz, depth; atol = 1e-8) ||
         throw(ArgumentError("export depth $depth m must coincide with a grid face"))
     return grid.Nz + 1 - steps
+end
+
+# Particle sinking remains explicit even with vertically implicit mixing.
+# A Courant number above one signals a likely sinking-advection time-step issue.
+function sinking_courant(model, dt)
+    dz = model.grid.Lz / model.grid.Nz
+    return maximum(abs(biogeochemical_drift_velocity(model.biogeochemistry, Val(name)).w[1, 1, k])
+                   for name in (:sPOM, :bPOM) for k in 1:(model.grid.Nz + 1)) * dt / dz
 end
 
 # Concentrations in mmol N/m³, face velocities in m/s (negative is downward).
@@ -122,6 +130,10 @@ function diagnose_column(filename, model)
     Δz = grid.Lz / grid.Nz
     z = [-grid.Lz + (k - 0.5) * Δz for k in 1:grid.Nz]
     vertical = (; (name => vertical_tracer(name) for name in tracers)...)
+    for (name, values) in pairs(vertical)
+        all(isfinite, values) || error("Non-finite $name concentration in $filename")
+        minimum(values) >= -1e-8 || error("Negative $name concentration in $filename")
+    end
     vertical_P, vertical_Z, vertical_NO₃ = vertical.P, vertical.Z, vertical.NO₃
     vertical_sPOM, vertical_bPOM, vertical_DOM = vertical.sPOM, vertical.bPOM, vertical.DOM
     nitrogen_inventory = Δz .* vec(sum(vertical.NO₃ .+ vertical.NH₄ .+

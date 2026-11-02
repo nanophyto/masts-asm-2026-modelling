@@ -4,7 +4,7 @@ include("idealised_physics.jl")
 include("column_diagnostics.jl")
 
 using .IdealisedPhysics: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions
-using .ColumnDiagnostics: face_index, downward_nitrogen_flux, cumulative_trapezoid,
+using .ColumnDiagnostics: face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
                           carbon_flux_mg_per_day, carbon_export_g_per_m2,
                           martin_flux, fit_martin_exponent,
                           living_particulate_fraction, dissolved_organic_fraction,
@@ -12,7 +12,7 @@ using .ColumnDiagnostics: face_index, downward_nitrogen_flux, cumulative_trapezo
                           diagnose_column, write_diagnostics, write_export_profile
 
 export surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
-       face_index, downward_nitrogen_flux, cumulative_trapezoid,
+       face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
        carbon_flux_mg_per_day, carbon_export_g_per_m2,
        martin_flux, fit_martin_exponent, living_particulate_fraction, dissolved_organic_fraction,
        upper_nitrogen_partition, diagnose_column, write_diagnostics, write_export_profile,

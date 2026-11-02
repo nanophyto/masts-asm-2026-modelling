@@ -66,7 +66,7 @@ for the same core constructors and output-writing conventions.
 
 ## Cycle 1.3: sinking organic-carbon export and budgets
 
-The same `01_grazing.jl` exercise now uses a **500 m, 100-cell** idealised
+The same `01_grazing.jl` exercise now uses a **500 m, 50-cell** idealised
 column. Export is diagnosed every 50 m from 50 to 500 m; the 100 m
 and 300 m horizons coincide with grid faces. For both grazing treatments it saves:
 
@@ -109,6 +109,14 @@ julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quic
 The ordinary `--quick` smoke test used in CI computes both flux and
 budget diagnostics and writes CSV files without loading Makie.
 
+## Column resolution and time step
+
+The two teaching exercises use **50 cells over 500 m** (10 m spacing),
+a **30-minute time step**, and vertically implicit diffusion.
+Particle sinking remains explicit; each exercise checks the sinking Courant
+number before running. The chosen configuration was validated over a full
+365-day seasonal cycle, including carbon export and nitrogen conservation.
+
 ## Workshop tutorials
 
 The GitHub Pages tutorial introduces the reference column, the grazing
@@ -129,11 +137,11 @@ After changing the project definition, refresh and commit your local manifest:
 julia --threads=1 --project=oceanbiome -e 'using Pkg; Pkg.resolve(); Pkg.instantiate()'
 ```
 
-Use `julia --threads=1` when running the examples. The smaller
-80-cell reference column ran fastest with a single thread in local benchmarks.
+Use `julia --threads=1` when running the single-column examples.
 
-For a documentation-only correction after successful annual simulations, reuse
-the already generated reference outputs without rerunning the columns:
+After updating the column configuration, regenerate the reference figures with
+`julia --project=docs docs/make.jl`. For subsequent documentation-only
+corrections, reuse those generated results:
 
 ```bash
 DOCS_REUSE_RESULTS=true julia --project=docs docs/make.jl

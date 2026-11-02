@@ -17,19 +17,19 @@
 
 using OceanBioME, Oceananigans
 using Oceananigans.Units
+using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
 using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
-                     diagnose_column, write_diagnostics, write_export_profile,
+                     sinking_courant, diagnose_column, write_diagnostics, write_export_profile,
                      plot_grazing_response, plot_plankton_balance, plot_carbon_export
 
 # ## Configure the water column
 #
-# The physical environment is an idealised BATS-like seasonal cycle. The grid
-# extends to 500 m, with 5 m cells and export horizons on grid faces. Initial
-# concentrations and physical forcing are shared by both simulations.
-#
-# Both experiments use identical idealised physics and initial conditions.
-grid = RectilinearGrid(size = 100, extent = 500meters,
+# The physical environment is an idealised BATS-like seasonal cycle.
+# Both grazing treatments use the same 500 m column, 50 cells (10 m spacing),
+# 30-minute step, physical forcing and initial concentrations.
+grid = RectilinearGrid(size = 50, extent = 500meters,
                        topology = (Flat, Flat, Bounded))
+time_step = 30minutes
 initial = initial_conditions()
 output_dir = get(ENV, "MASTS_OUTPUT_DIR",
                  joinpath(@__DIR__, "..", "..", "outputs", "oceanbiome"))
@@ -55,13 +55,17 @@ for (label, grazing_rate) in (("control", 0.8 / day),
     biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
 
     model = NonhydrostaticModel(grid;
-                                closure = ScalarDiffusivity(ν = vertical_diffusivity,
+                                closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
+                                                            ν = vertical_diffusivity,
                                                             κ = vertical_diffusivity),
                                 biogeochemistry)
 
     set!(model; initial...)
+    sinking_cfl = sinking_courant(model, time_step)
+    isfinite(sinking_cfl) && sinking_cfl < 1 ||
+        error("Particle sinking CFL $sinking_cfl requires a shorter time step")
 
-    simulation = Simulation(model; Δt = 3minutes, stop_time = quick ? 2days : 365days)
+    simulation = Simulation(model; Δt = time_step, stop_time = quick ? 2days : 365days)
     filename = joinpath(output_dir, "$(label).jld2")
     simulation.output_writers[:profiles] = JLD2Writer(model, model.tracers;
                                                        filename,

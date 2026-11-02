@@ -83,6 +83,14 @@ julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl
 
 Use `--quick` after the script name for a two-day end-to-end smoke run.
 
+### Column configuration
+
+Both teaching exercises run a 500 m water column with **50 vertical cells**
+(10 m spacing), a **30-minute time step**, and vertically implicit diffusion.
+The particle-sinking Courant number is checked before each run. In the 365-day comparison with the original column, this configuration ran
+about six times faster, with cumulative export differences of 4.0% at 100 m
+and 4.4% at 300 m.
+
 The example uses the native OceanBioME/Oceananigans model constructors, with
 forcing, export diagnostics and optional plotting functions from the local
 `MASTSWorkshop` Julia package. Its outputs appear under

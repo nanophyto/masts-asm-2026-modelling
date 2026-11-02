@@ -81,6 +81,10 @@ For a short two-day check, append `--quick --plot` to either command. This
 also tests CairoMakie figure generation. Initial plotting compilation may
 take longer than later runs.
 
+Both Julia exercises use 50 vertical cells over 500 m, a 30-minute time step,
+and vertically implicit mixing. The same configuration is used for the full
+365-day run and the two-day check.
+
 ## Run the workshop image with Docker
 
 A combined Julia/Python environment with browser-based Code OSS is also

@@ -1,7 +1,8 @@
 using Test, Pkg
 using OceanBioME, Oceananigans
+using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
 using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
-                     face_index, downward_nitrogen_flux, cumulative_trapezoid,
+                     face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
                      carbon_flux_mg_per_day, carbon_export_g_per_m2,
                      martin_flux, fit_martin_exponent,
                      living_particulate_fraction, dissolved_organic_fraction, upper_nitrogen_partition
@@ -27,7 +28,7 @@ using Oceananigans.Units
 end
 
 @testset "LOBSTER column and grazing response" begin
-    grid = RectilinearGrid(size = 20, extent = 200meters,
+    grid = RectilinearGrid(size = 50, extent = 500meters,
                            topology = (Flat, Flat, Bounded))
     initial = initial_conditions()
 
@@ -37,7 +38,8 @@ end
                              maximum_grazing_rate = grazing_rate)
         biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
         model = NonhydrostaticModel(grid;
-                                    closure = ScalarDiffusivity(ν = vertical_diffusivity,
+                                    closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
+                                                                ν = vertical_diffusivity,
                                                                 κ = vertical_diffusivity),
                                     biogeochemistry)
         set!(model; initial...)
@@ -52,7 +54,8 @@ end
     @test all(interior(control.tracers.P) .== interior(reduced.tracers.P))
 
     for model in (control, reduced)
-        run!(Simulation(model; Δt = 3minutes, stop_time = 2days))
+        @test 0 <= sinking_courant(model, 30minutes) < 1
+        run!(Simulation(model; Δt = 30minutes, stop_time = 2days))
         for tracer in values(model.tracers)
             @test all(isfinite, interior(tracer))
             @test all(x -> x >= -1e-8, interior(tracer))
@@ -64,15 +67,12 @@ end
 
 
 @testset "Carbon export and nitrogen budget diagnostics" begin
-    grid = RectilinearGrid(size = 40, extent = 400meters,
+    grid = RectilinearGrid(size = 50, extent = 500meters,
                            topology = (Flat, Flat, Bounded))
-    @test (face_index(grid, 100), face_index(grid, 300), face_index(grid, 400)) == (31, 11, 1)
+    @test (face_index(grid, 100), face_index(grid, 300), face_index(grid, 500)) ==
+          (41, 21, 1)
     @test_throws ArgumentError face_index(grid, 105)
-    @test_throws ArgumentError face_index(grid, 450)
-    deep_grid = RectilinearGrid(size = 100, extent = 500meters,
-                                topology = (Flat, Flat, Bounded))
-    @test (face_index(deep_grid, 50), face_index(deep_grid, 300),
-           face_index(deep_grid, 500)) == (91, 41, 1)
+    @test_throws ArgumentError face_index(grid, 550)
 
     @test downward_nitrogen_flux(0.1, 0.2, -2 / day, -50 / day) ≈ 10.2 / day
     @test downward_nitrogen_flux(0.1, 0.2, 2 / day, 50 / day) == 0
