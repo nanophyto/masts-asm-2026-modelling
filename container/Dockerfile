@@ -6,7 +6,7 @@ FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:la
 
 ARG TARGETARCH
 ARG SOURCE_REPOSITORY=""
-ARG JULIA_EXTENSION_VERSION=1.219.2
+ARG JULIA_EXTENSION_VERSION=1.250.2
 ARG PYTHON_EXTENSION_VERSION=2026.4.0
 
 LABEL org.opencontainers.image.title="MASTS ASM 2026 modelling workshop" \

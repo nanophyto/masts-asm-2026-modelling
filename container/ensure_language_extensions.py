@@ -15,7 +15,7 @@ from zipfile import ZipFile
 
 
 EXTENSIONS = {
-    "julialang.language-julia": ("julia.vsix", "1.219.2"),
+    "julialang.language-julia": ("julia.vsix", "1.250.2"),
     "ms-python.python": ("python.vsix", "2026.4.0"),
 }
 

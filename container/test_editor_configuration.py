@@ -84,6 +84,17 @@ class LanguageExtensionTests(unittest.TestCase):
                     "publisher": publisher, "name": name, "version": version,
                 }))
 
+    def test_docker_version_pins_match_installer(self):
+        dockerfile = Path(__file__).with_name("Dockerfile").read_text()
+        self.assertIn(
+            f"ARG JULIA_EXTENSION_VERSION={EXTENSIONS['julialang.language-julia'][1]}",
+            dockerfile,
+        )
+        self.assertIn(
+            f"ARG PYTHON_EXTENSION_VERSION={EXTENSIONS['ms-python.python'][1]}",
+            dockerfile,
+        )
+
     def test_pinned_archives_identify_both_languages(self):
         verify_vsix_files(self.vsix_dir)
         with ZipFile(self.vsix_dir / "python.vsix", "w") as archive:
@@ -96,7 +107,7 @@ class LanguageExtensionTests(unittest.TestCase):
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_installs_missing_extensions_and_checks_registration(self, listed, run):
-        listed.side_effect = ["", "julialang.language-julia@1.219.2\nms-python.python@2026.4.0\n"]
+        listed.side_effect = ["", "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\n"]
         ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
         self.assertEqual(run.call_count, 2)
         self.assertEqual(run.call_args_list, [
@@ -107,7 +118,7 @@ class LanguageExtensionTests(unittest.TestCase):
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_existing_matching_versions_are_idempotent(self, listed, run):
-        listed.return_value = "julialang.language-julia@1.219.2\nms-python.python@2026.4.0\n"
+        listed.return_value = "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\n"
         ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
         run.assert_not_called()
 

@@ -55,7 +55,7 @@ During workstation startup, after Code OSS is launched, the installer checks:
 /opt/code-oss/bin/codeoss-cloudworkstations --list-extensions --show-versions
 ```
 
-It installs `julialang.language-julia@1.219.2` and
+It installs `julialang.language-julia@1.250.2` and
 `ms-python.python@2026.4.0` from bundled VSIX files when needed.
 Both extensions should appear in that listing. Optional extension packs are
 skipped so no other extensions need to be downloaded. No internet access is
@@ -75,6 +75,18 @@ edits, different dependency versions or Julia's VS Code extension packages
 may still trigger normal one-time compilation. `VSCodeServer` belongs to the
 Julia editor extension, installed separately in each persistent home, so
 its initial compile can still occur when a participant starts the REPL.
+
+The Julia extension is pinned to `1.250.2` (Open VSX, 21 October 2026).
+This replaces `1.219.2`, whose bundled SymbolServer was observed to crash
+with `MethodError: Cannot convert an object of type String to ... Symbol`
+while indexing CairoMakie, OceanBioME and Oceananigans. The startup
+installer updates already-provisioned persistent editor profiles as well as
+fresh workstations. After rebuilding and restarting the container, reload
+the browser editor and verify that `--list-extensions --show-versions`
+reports `julialang.language-julia@1.250.2`. Reopen the Julia project and
+check the language-server log while loading the reference column. This
+version update is a candidate fix; successful indexing must be confirmed
+in a live workstation.
 
 If a Julia editor crash notification appears while an experiment finishes, inspect
 **View > Output > Julia Language Server** (and the **Julia** output channel)
