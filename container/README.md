@@ -61,6 +61,28 @@ Both extensions should appear in that listing. Optional extension packs are
 skipped so no other extensions need to be downloaded. No internet access is
 required during participant startup. If installation fails, the startup log reports it.
 
+The Julia extension's Juliaup recommendation is disabled, since the image
+pins Julia 1.10. Symbol-cache downloads are enabled in machine settings to
+avoid the extension's permission prompt while retaining its faster symbol
+index. These defaults also apply to participants reusing an existing home.
+
+Julia package caches are prepared during image construction. In addition to
+precompiling the `/opt/workshop/source` environment, the image now loads
+`MASTSWorkshop` at its final editable workspace path
+(`/home/user/masts-asm-2026-modelling`). On first startup the source is
+copied with original timestamps to help the Julia cache remain valid. Source
+edits, different dependency versions or Julia's VS Code extension packages
+may still trigger normal one-time compilation. `VSCodeServer` belongs to the
+Julia editor extension, installed separately in each persistent home, so
+its initial compile can still occur when a participant starts the REPL.
+
+If a Julia editor crash notification appears while an experiment finishes, inspect
+**View > Output > Julia Language Server** (and the **Julia** output channel)
+before changing the image. A language-server failure is separate from a
+successfully completed Julia script. For local containers, `docker stats
+masts-workshop` can help identify memory pressure. Keep actual crash
+notifications visible until the cause is understood.
+
 Machine defaults are seeded into
 `/home/user/.codeoss-cloudworkstations/data/Machine/settings.json` before
 Code OSS launches, including on an existing home volume. Existing participant

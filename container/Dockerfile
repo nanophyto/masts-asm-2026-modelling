@@ -77,6 +77,19 @@ RUN mkdir -p /opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
        -e 'using MASTSWorkshop, OceanBioME, Oceananigans, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))'
 
+# Also warm the editable participant checkout at its eventual absolute path.
+# Julia's compiled cache tracks source paths; the first workspace copy at
+# startup preserves source timestamps, so this cache can be reused. Keep the
+# built image's /home clean for Google Workstations' persistent home mount.
+RUN mkdir -p /home/user/masts-asm-2026-modelling \
+    && cp -R --preserve=mode,timestamps /opt/workshop/source/. \
+       /home/user/masts-asm-2026-modelling/ \
+    && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
+       julia --threads=1 --startup-file=no \
+       --project=/home/user/masts-asm-2026-modelling/oceanbiome \
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))' \
+    && rm -rf /home/user/masts-asm-2026-modelling
+
 # Executed by Google's standard entrypoint after user creation and before
 # Code OSS starts. The base entrypoint and editor scripts stay unchanged.
 COPY container/100_seed-workshop.sh /etc/workstation-startup.d/100_seed-workshop.sh

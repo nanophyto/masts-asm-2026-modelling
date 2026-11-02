@@ -29,6 +29,8 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertFalse(configured["git.enabled"])
         self.assertFalse(configured["extensions.autoUpdate"])
+        self.assertIs(configured["julia.juliaup.install.hint"], False)
+        self.assertIs(configured["julia.symbolCacheDownload"], True)
 
     def test_reuse_preserves_custom_settings_and_is_idempotent(self):
         self.settings.parent.mkdir(parents=True)

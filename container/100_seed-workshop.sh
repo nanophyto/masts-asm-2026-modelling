@@ -16,7 +16,10 @@ chown "$(id -u "$username"):$(id -g "$username")" "$home_dir"
 # Seed editable examples once per participant; preserve subsequent edits.
 if [[ ! -f "$workspace/README.md" ]]; then
     runuser -u "$username" -- mkdir -p "$workspace"
-    runuser -u "$username" -- cp -R /opt/workshop/source/. "$workspace/"
+    # Preserve source modification times, allowing the image's precompiled
+    # workshop module to be reused at its runtime source path.
+    runuser -u "$username" -- cp -R --preserve=mode,timestamps \
+        /opt/workshop/source/. "$workspace/"
 fi
 
 # Default editor settings, only on the first run.

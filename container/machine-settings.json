@@ -19,5 +19,7 @@
   "extensions.autoCheckUpdates": false,
   "extensions.autoUpdate": false,
   "update.showReleaseNotes": false,
-  "telemetry.telemetryLevel": "off"
+  "telemetry.telemetryLevel": "off",
+  "julia.juliaup.install.hint": false,
+  "julia.symbolCacheDownload": true
 }
