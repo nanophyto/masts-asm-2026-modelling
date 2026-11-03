@@ -21,9 +21,10 @@ class WorkstationWarmupTests(unittest.TestCase):
         self.extension = self.home / ".codeoss-cloudworkstations/extensions/julialang.language-julia-1.250.2"
         self.sysimage = self.root / "science.so"
         for base in (self.workspace, self.source):
-            (base / "oceanbiome/exercises").mkdir(parents=True)
+            (base / "workshop/01_OceanBioME").mkdir(parents=True)
+            (base / "oceanbiome").mkdir(parents=True)
             (base / "oceanbiome/Project.toml").write_text("name=\"MASTSWorkshop\"\n")
-            (base / "oceanbiome/exercises/00_reference_column.jl").write_text("println(1)\n")
+            (base / "workshop/01_OceanBioME/00_reference_column.jl").write_text("println(1)\n")
         for language, project in (("languageserver", "v1.11"), ("terminalserver", "v1.10")):
             p = self.extension / "scripts/environments" / language / project / "Project.toml"
             p.parent.mkdir(parents=True)
@@ -36,17 +37,17 @@ class WorkstationWarmupTests(unittest.TestCase):
     def test_stages_use_distinct_editor_and_science_julia(self):
         work = list(stages(self.home, self.workspace, self.extension, self.source))
         self.assertEqual([item[0] for item in work], [
-            "Two-day OceanBioME reference and plots", "Julia 1.11 language server",
+            "Annual OceanBioME reference and plots", "Julia 1.11 language server",
             "Julia 1.10 editor REPL",
         ])
         self.assertEqual(work[0][1][0], "/opt/workshop/bin/julia")
-        self.assertEqual(work[0][1][-1], "--quick")
+        self.assertEqual(work[0][1][-1], str(self.source / "workshop/01_OceanBioME/00_reference_column.jl"))
         self.assertTrue(work[0][2]["MASTS_OUTPUT_DIR"].startswith(str(self.home / ".cache")))
         self.assertEqual(work[1][1][0], "/opt/julia-ls/bin/julia")
         self.assertEqual(work[2][1][0], "/opt/julia/bin/julia")
 
     def test_completes_once_and_preserves_user_files(self):
-        original = self.workspace / "oceanbiome/exercises/00_reference_column.jl"
+        original = self.workspace / "workshop/01_OceanBioME/00_reference_column.jl"
         calls = []
         original.write_text("println(42)\n")
         def runner(cmd, **kwargs):
@@ -54,7 +55,7 @@ class WorkstationWarmupTests(unittest.TestCase):
         self.assertEqual(self.warm(runner), "ready")
         self.assertEqual(self.warm(runner), "ready")
         self.assertEqual(len(calls), 3)
-        self.assertIn(str(self.source / "oceanbiome/exercises/00_reference_column.jl"), calls[0][0])
+        self.assertIn(str(self.source / "workshop/01_OceanBioME/00_reference_column.jl"), calls[0][0])
         self.assertNotIn(str(original), calls[0][0])
         self.assertEqual(original.read_text(), "println(42)\n")
         self.assertTrue(ready(self.home / ".cache/masts-workshop", fingerprint(self.source, self.sysimage)))
@@ -87,7 +88,7 @@ class WorkstationWarmupTests(unittest.TestCase):
         calls = []
         self.assertEqual(self.warm(lambda cmd, **kwargs: calls.append(cmd)), "failed")
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0][-1], "--quick")
+        self.assertEqual(calls[0][-1], str(self.source / "workshop/01_OceanBioME/00_reference_column.jl"))
         status = json.loads((self.home / ".cache/masts-workshop/status.json").read_text())
         self.assertIn("language-server environment", status["error"])
 

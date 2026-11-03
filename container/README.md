@@ -151,7 +151,7 @@ versions and reproduces the installation into a fresh image.
 
 ## Running a Julia script in the browser editor
 
-Open `oceanbiome/exercises/00_reference_column.jl` in Explorer. With the Julia extension loaded, `Ctrl+Shift+P` offers `Julia: Run File in
+Open `workshop/01_OceanBioME/00_reference_column.jl` in Explorer. With the Julia extension loaded, `Ctrl+Shift+P` offers `Julia: Run File in
 New Process` and `Julia: Execute File in REPL`. Julia also contributes a
 Run action for `.jl` editors. Python contributes `Python: Run Python File in
 Terminal` for `.py` editors. Check both commands after the browser loads.
@@ -159,14 +159,14 @@ Terminal` for `.py` editors. Check both commands after the browser loads.
 If a command is absent, inspect the installed extensions with the CLI above
 and use `Developer: Show Running Extensions` from `Ctrl+Shift+P`.
 
-For a fast two-day test, use **Terminal > New Terminal** from the repository
-root:
+For a full annual simulation, use **Terminal > New Terminal** from the
+repository root:
 
 ```bash
-julia --project=oceanbiome oceanbiome/exercises/00_reference_column.jl --quick
+julia --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl
 ```
 
-The script writes figures and diagnostics into `outputs/oceanbiome/`.
+The script writes figures and diagnostics into `workshop/results/oceanbiome/`.
 
 ## Early workstation preparation and scientific startup timing (Cycle 1.6)
 
@@ -186,7 +186,7 @@ extension-installation stage. The script starts preparation as the `user`
 account in the background and immediately returns control to Code OSS.
 It performs these steps sequentially:
 
-1. Run the image's tested `00_reference_column.jl --quick` with Julia 1.10,
+1. Run the image's tested annual reference column with Julia 1.10,
    writing figures and diagnostics into `~/.cache/masts-workshop/reference-output`.
    The participant's editable files are never executed automatically.
 2. Precompile the Julia 1.11 language-server environment from the installed
@@ -195,7 +195,7 @@ It performs these steps sequentially:
 
 It runs once per image/science version. An exclusive file lock prevents
 parallel warm-ups, and the completion marker is written only after all steps
-succeed. Participant exercises, edits and the normal `outputs/` directory are
+succeed. Participant exercises, edits and the participant's `workshop/results/` directory are
 preserved. Failed preparation is recorded and retried on the next startup.
 
 For a local Docker rehearsal, with the image built:
@@ -214,17 +214,17 @@ python /opt/workshop/warmup_workstation.py status
 tail -f ~/.cache/masts-workshop/warmup.log
 ```
 
-The status becomes `ready` after the two-day run has produced its output.
+The status becomes `ready` after the annual reference run has produced its output.
 Cloud operators should start all participant workstations early and verify
 `ready` before sharing launch links. Precompilation of the package index and
 symbol downloads may still be performed by the language-server process when
-participants first open the workspace. Running the quick example in a
+participants first open the workspace. Running the reference example in a
 separate process also does not preserve all JIT-compiled methods by itself.
 
 ### Optional shared science sysimage
 
 To reduce compilation across separate Julia processes, test an image built
-with PackageCompiler 2.2.5. It uses `00_reference_column.jl --quick` as a
+with PackageCompiler 2.2.5. It uses the annual reference exercise as a
 precompile workload and builds a portable generic x86-64 sysimage containing
 OceanBioME, Oceananigans and CairoMakie. The editable `MASTSWorkshop` package
 is loaded from the participant workspace, so students can change workshop

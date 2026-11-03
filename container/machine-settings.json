@@ -6,7 +6,7 @@
   "workbench.tips.enabled": false,
   "workbench.editor.empty.hint": "hidden",
   "workbench.sideBar.location": "left",
-  "workbench.activityBar.location": "hidden",
+  "workbench.activityBar.location": "default",
   "workbench.secondarySideBar.defaultVisibility": "hidden",
   "workbench.layoutControl.enabled": false,
   "window.commandCenter": false,

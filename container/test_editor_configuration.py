@@ -25,7 +25,7 @@ class EditorConfigurationTests(unittest.TestCase):
         configured = json.loads(self.settings.read_text())
         self.assertEqual(configured["workbench.colorTheme"], "Default Dark Modern")
         self.assertEqual(configured["workbench.startupEditor"], "none")
-        self.assertEqual(configured["workbench.activityBar.location"], "hidden")
+        self.assertEqual(configured["workbench.activityBar.location"], "default")
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertFalse(configured["git.enabled"])
         self.assertFalse(configured["extensions.autoUpdate"])

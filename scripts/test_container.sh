@@ -28,16 +28,14 @@ docker run --rm \
         /opt/julia-ls/bin/julia --startup-file=no -e "@assert VERSION == v\"1.11.9\""
         julia --threads=1 --startup-file=no --project=oceanbiome -e \
           "using MASTSWorkshop, CairoMakie; @assert Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt) !== nothing"
-        for trial in 1 2; do
-          echo "Reference column (2 simulated days), trial $trial:"
-          MASTS_OUTPUT_DIR=/results/reference /usr/bin/time -v \
-            julia --threads=1 --startup-file=no --project=oceanbiome \
-            oceanbiome/exercises/00_reference_column.jl --quick
-        done
-        echo "Grazing experiments (2 simulated days each):"
+        echo "Reference column (365 simulated days):"
+        MASTS_OUTPUT_DIR=/results/reference /usr/bin/time -v \
+          julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/00_reference_column.jl
+        echo "Grazing experiments (365 simulated days each):"
         MASTS_OUTPUT_DIR=/results/grazing /usr/bin/time -v \
           julia --threads=1 --startup-file=no --project=oceanbiome \
-          oceanbiome/exercises/01_grazing.jl --quick --plot
+          workshop/01_OceanBioME/01_grazing.jl
         python container/check_outputs.py /results
     '
 

@@ -63,27 +63,21 @@ julia --threads=1 --project=oceanbiome oceanbiome/test/runtests.jl
 First run the reference column:
 
 ```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/00_reference_column.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl
 ```
 
 Then change grazing and compare two columns:
 
 ```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
 ```
 
 Both scripts generate JLD2 tracer profiles, diagnostic CSVs and PNG figures
-under `outputs/oceanbiome/`. The reference outputs are in its
-`reference_column/` subdirectory. Experiment results are saved in the
-main `outputs/oceanbiome/` directory.
-
-For a short two-day check, append `--quick --plot` to either command. This
-also tests CairoMakie figure generation. Initial plotting compilation may
-take longer than later runs.
+under `workshop/results/oceanbiome/`, with separate `reference_column/` and
+`grazing/` directories. The first plot may take longer while CairoMakie loads.
 
 Both Julia exercises use 50 vertical cells over 500 m, a 30-minute time step,
-and vertically implicit mixing. The same configuration is used for the full
-365-day run and the two-day check.
+vertically implicit mixing and a 365-day seasonal simulation.
 
 ## Run the workshop image with Docker
 
@@ -98,8 +92,8 @@ docker run --privileged --rm -p 127.0.0.1:8080:80 \
   ghcr.io/<owner>/masts-asm-2026-modelling:latest
 ```
 
-Open `http://localhost:8080` and then
-`/home/user/masts-asm-2026-modelling`. The named volume retains edits and
+Open `http://localhost:8080`, then the participant folder
+`/home/user/masts-asm-2026-modelling/workshop`. The named volume retains edits and
 output files between sessions. See the repository's `container/README.md`
 for local image building and verification.
 

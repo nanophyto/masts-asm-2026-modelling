@@ -12,7 +12,7 @@ The exercises are ordinary Python and Julia scripts intended to remain useful af
 ### Workstation first-run preparation
 
 The combined Docker image can pre-warm the Julia editor environments and run
-the two-day reference column once per participant's persistent workstation
+the 365-day reference column once per participant's persistent workstation
 home. Enable `MASTS_WARMUP_ON_START=1` in the Cloud Workstations container
 configuration and start the instances before the session. Check readiness with
 `python /opt/workshop/warmup_workstation.py status` inside a workstation.
@@ -55,8 +55,7 @@ If using juliaup, run `juliaup add 1.10` and
 `juliaup override set 1.10` from the repository root. Set `JULIA_BIN`
 when using a custom Julia executable path.
 
-Outputs from later modelling exercises will be written under `outputs/`
-(ignored by Git).
+Participant results are written under `workshop/results/` (ignored by Git).
 
 ## Development status
 
@@ -66,10 +65,11 @@ Outputs from later modelling exercises will be written under `outputs/`
 **Cycle 1.3b:** Documenter.jl tutorial with executed reference results and figure validation.
 Cycle 1.4 includes the combined Code OSS workshop image and an opt-in GHCR publication workflow. Abil.py is installed and import-tested; its exercises are prepared separately.
 
-Begin with the reference LOBSTER column and then change grazing:
+The participant-facing folder is [`workshop/`](workshop/). Begin with the reference
+LOBSTER column and then change grazing:
 
 ```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/00_reference_column.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl
 ```
 
 The [Documenter tutorials](docs/src/index.md) walk through the reference
@@ -78,25 +78,23 @@ model, the grazing experiment, local installation and physical forcing.
 Run the 1D LOBSTER example after setup:
 
 ```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
 ```
 
-Use `--quick` after the script name for a two-day end-to-end smoke run.
 
 ### Column configuration
 
 Both teaching exercises run a 500 m water column with **50 vertical cells**
 (10 m spacing), a **30-minute time step**, and vertically implicit diffusion.
-The particle-sinking Courant number is checked before each run. In the 365-day comparison with the original column, this configuration ran
-about six times faster, with cumulative export differences of 4.0% at 100 m
-and 4.4% at 300 m.
+The particle-sinking Courant number is checked in the Julia test suite for the
+reference and reduced-grazing parameter sets. In the 365-day comparison with
+the original column, this configuration ran about six times faster, with
+cumulative export differences of 4.0% at 100 m and 4.4% at 300 m.
 
-The example uses the native OceanBioME/Oceananigans model constructors, with
-forcing, export diagnostics and optional plotting functions from the local
-`MASTSWorkshop` Julia package. Its outputs appear under
-`outputs/oceanbiome/` and are excluded from Git. The grazing experiment generates two comparison figures and CSV files
-containing carbon export and nitrogen budgets; use `--quick --plot` to test
-plotting on the two-day run.
+`MASTSWorkshop.column(:BATS)` prepares the idealised BATS-like physics and
+numerical settings. The exercises use native OceanBioME/Oceananigans
+constructors and write their figures and diagnostics to
+`workshop/results/oceanbiome/`.
 
 ## Workshop documentation
 

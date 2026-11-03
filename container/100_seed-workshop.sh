@@ -23,16 +23,16 @@ if [[ ! -f "$workspace/README.md" ]]; then
 fi
 
 # Default editor settings, only on the first run.
-settings_dir="$workspace/.vscode"
-runuser -u "$username" -- mkdir -p "$settings_dir"
-if [[ ! -f "$settings_dir/settings.json" ]]; then
-    sed "s|__WORKSPACE__|$workspace|g" /opt/workshop/workspace-settings.json \
-        | runuser -u "$username" -- tee "$settings_dir/settings.json" >/dev/null
-fi
-# Existing persistent volumes may contain the previous default Julia path.
-# Migrate only that setting while preserving the participant's other edits.
-runuser -u "$username" -- /opt/workshop/python/bin/python \
-    /opt/workshop/configure_editor.py migrate-workspace-julia "$settings_dir/settings.json"
+for settings_dir in "$workspace/.vscode" "$workspace/workshop/.vscode"; do
+    runuser -u "$username" -- mkdir -p "$settings_dir"
+    if [[ ! -f "$settings_dir/settings.json" ]]; then
+        sed "s|__WORKSPACE__|$workspace|g" /opt/workshop/workspace-settings.json \
+            | runuser -u "$username" -- tee "$settings_dir/settings.json" >/dev/null
+    fi
+    # Preserve previous user settings and migrate the older Julia executable.
+    runuser -u "$username" -- /opt/workshop/python/bin/python \
+        /opt/workshop/configure_editor.py migrate-workspace-julia "$settings_dir/settings.json"
+done
 
 # Google Code OSS reads machine-wide defaults from this persistent-home path.
 # Install missing defaults for fresh and existing volumes before IDE startup,

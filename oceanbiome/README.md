@@ -20,7 +20,7 @@ CairoMakie's installed version without loading Makie. Plotting precompilation is
 
 ## Instructor reference column
 
-Run `julia --threads=1 --project=oceanbiome oceanbiome/exercises/00_reference_column.jl`
+Run `julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl`
 for the single-column walkthrough. The follow-up `01_grazing.jl` changes
 one parameter and compares two runs. Documenter provides separate pages
 for these exercises, local setup and physical forcing.
@@ -30,25 +30,17 @@ for these exercises, local setup and physical forcing.
 From the repository root, using your tested Julia 1.10 environment:
 
 ```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl
-```
-
-For a short end-to-end check of the script and output writing:
-
-```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quick
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
 ```
 
 The script constructs the biological model with `PhytoZoo` and `LOBSTER`,
-couples it with `NonhydrostaticModel`, initialises the seven tracers and
-runs 365 days of control and reduced-grazing simulations (2 days with `--quick`). Both runs use an
-identical, idealised BATS-like seasonal cycle for light and vertical mixing.
-The physics and initial conditions are exported by the local `MASTSWorkshop` package from `oceanbiome/src/idealised_physics.jl`, alongside the reusable export diagnostics.
+couples it with `NonhydrostaticModel`, initialises all seven tracers and runs
+365 days of control and reduced-grazing simulations. Both use the same
+idealised BATS-like light and mixing, prepared by `MASTSWorkshop.column(:BATS)`.
 
-Oceananigans writes the two sets of tracer profiles to
-`outputs/oceanbiome/control.jld2` and
-`outputs/oceanbiome/reduced_grazing.jld2`. The script prints the final
-surface phytoplankton concentration from each output file. Cycle 1.3 adds sinking carbon-export diagnostics and comparison figures.
+Oceananigans writes the two tracer-profile files to
+`workshop/results/oceanbiome/grazing/`. The script prints the final surface
+phytoplankton concentrations and saves export, budget and figure diagnostics.
 
 Run the existing tests again with:
 
@@ -99,22 +91,15 @@ column produces `reference_vertical_evolution.png`,
 `reference_physics.png`. The export-profile figure compares final 90-day
 mean model fluxes to the Martin et al. (1987) power-law reference anchored
 at 100 m, and shows cumulative export over the full simulated year.
-To test plotting on a
-short run (which also loads and compiles CairoMakie), use:
-
-```bash
-julia --threads=1 --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quick --plot
-```
-
-The ordinary `--quick` smoke test used in CI computes both flux and
-budget diagnostics and writes CSV files without loading Makie.
+The annual grazing script produces the comparison figures. The test suite
+uses short two-day model runs to validate scientific and numerical behaviour.
 
 ## Column resolution and time step
 
 The two teaching exercises use **50 cells over 500 m** (10 m spacing),
 a **30-minute time step**, and vertically implicit diffusion.
-Particle sinking remains explicit; each exercise checks the sinking Courant
-number before running. The chosen configuration was validated over a full
+Particle sinking remains explicit; the Julia test suite checks its Courant
+number for both grazing configurations. The chosen configuration was validated over a full
 365-day seasonal cycle, including carbon export and nitrogen conservation.
 
 ## Workshop tutorials
