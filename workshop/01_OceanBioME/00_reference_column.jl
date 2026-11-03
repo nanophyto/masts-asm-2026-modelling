@@ -18,7 +18,7 @@
 using OceanBioME, Oceananigans, CairoMakie
 using Oceananigans.Units
 import MASTSWorkshop
-using MASTSWorkshop: results_directory, diagnose_column, write_diagnostics, write_export_profile,
+using MASTSWorkshop: results_directory, analyse_column_output, write_diagnostics, write_export_profile,
                      plot_vertical_evolution, plot_nitrogen_partition, plot_living_fraction,
                      plot_reference_export, plot_export_profile, plot_idealised_physics
 
@@ -64,16 +64,16 @@ simulation.output_writers[:profiles] = JLD2Writer(model, model.tracers;
                                                    overwrite_files = true)
 run!(simulation)
 
-diagnostics = diagnose_column(filename, model)
-write_diagnostics(joinpath(output_dir, "reference_diagnostics.csv"), diagnostics)
-write_export_profile(joinpath(output_dir, "reference_export_profile.csv"), diagnostics)
+reference_results = analyse_column_output(filename, model)
+write_diagnostics(joinpath(output_dir, "reference_diagnostics.csv"), reference_results)
+write_export_profile(joinpath(output_dir, "reference_export_profile.csv"), reference_results)
 
-println("Reference: final surface phytoplankton = ", last(diagnostics.surface_P), " mmol N/m³")
-println("Reference: cumulative export at 100 m = ", last(diagnostics.export_100.cumulative_g_C), " g C/m²")
-println("Reference: cumulative export at 300 m = ", last(diagnostics.export_300.cumulative_g_C), " g C/m²")
-println("Reference: fitted Martin b = ", diagnostics.export_profile.martin_b)
-println("Reference: nitrogen budget residual = ", last(diagnostics.budget_residual),
-        " mmol N/m² (", 100 * last(diagnostics.budget_residual) / first(diagnostics.nitrogen_inventory),
+println("Reference: final surface phytoplankton = ", last(reference_results.surface_P), " mmol N/m³")
+println("Reference: cumulative export at 100 m = ", last(reference_results.export_100.cumulative_g_C), " g C/m²")
+println("Reference: cumulative export at 300 m = ", last(reference_results.export_300.cumulative_g_C), " g C/m²")
+println("Reference: fitted Martin b = ", reference_results.export_profile.martin_b)
+println("Reference: nitrogen budget residual = ", last(reference_results.budget_residual),
+        " mmol N/m² (", 100 * last(reference_results.budget_residual) / first(reference_results.nitrogen_inventory),
         "% of sampled starting inventory)")
 println("Saved $filename and diagnostics CSV")
 
@@ -90,7 +90,7 @@ println("Saved $filename and diagnostics CSV")
 # responds to light, mixing and biological processes.
 
 vertical_figure = joinpath(output_dir, "reference_vertical_evolution.png")
-plot_vertical_evolution(diagnostics, vertical_figure)
+plot_vertical_evolution(reference_results, vertical_figure)
 println("Saved $vertical_figure")
 
 #md # WORKSHOP_REFERENCE_VERTICAL_FIGURE
@@ -105,7 +105,7 @@ println("Saved $vertical_figure")
 # [Fasham et al. (1990)](https://elischolar.library.yale.edu/journal_of_marine_research/1981/).
 
 partition_figure = joinpath(output_dir, "reference_nitrogen_partition.png")
-plot_nitrogen_partition(diagnostics, partition_figure)
+plot_nitrogen_partition(reference_results, partition_figure)
 println("Saved $partition_figure")
 
 #md # WORKSHOP_REFERENCE_PARTITION_FIGURE
@@ -123,7 +123,7 @@ println("Saved $partition_figure")
 # by LOBSTER, so our nitrogen ratio illustrates the model's compartments.
 
 living_figure = joinpath(output_dir, "reference_living_fraction.png")
-plot_living_fraction(diagnostics, living_figure)
+plot_living_fraction(reference_results, living_figure)
 println("Saved $living_figure")
 
 #md # WORKSHOP_REFERENCE_LIVING_FIGURE
@@ -136,7 +136,7 @@ println("Saved $living_figure")
 # particulate matter, particularly early in the simulation.
 
 export_figure = joinpath(output_dir, "reference_carbon_export.png")
-plot_reference_export(diagnostics, export_figure)
+plot_reference_export(reference_results, export_figure)
 println("Saved $export_figure")
 
 #md # WORKSHOP_REFERENCE_EXPORT_FIGURE
@@ -153,7 +153,7 @@ println("Saved $export_figure")
 # biological transformations and particle sinking generate the model profile.
 
 profile_figure = joinpath(output_dir, "reference_martin_curve.png")
-plot_export_profile(diagnostics, profile_figure)
+plot_export_profile(reference_results, profile_figure)
 println("Saved $profile_figure")
 
 #md # WORKSHOP_REFERENCE_MARTIN_FIGURE
