@@ -7,19 +7,17 @@
 # From the repository root:
 #
 # ```bash
-# julia --project=oceanbiome oceanbiome/exercises/01_grazing.jl
+# julia --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
 # ```
 #
-# Add `--quick` for a two-day test, or `--quick --plot` to test plotting.
-# The full experiment runs for 365 days.
+# Both experiments run for 365 days and save comparison figures.
 
 # ## Load the packages and prepared physical forcing
 
-using OceanBioME, Oceananigans
+using OceanBioME, Oceananigans, CairoMakie
 using Oceananigans.Units
-using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
-using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
-                     sinking_courant, diagnose_column, write_diagnostics, write_export_profile,
+import MASTSWorkshop
+using MASTSWorkshop: results_directory, diagnose_column, write_diagnostics, write_export_profile,
                      plot_grazing_response, plot_plankton_balance, plot_carbon_export
 
 # ## Configure the water column
@@ -27,15 +25,8 @@ using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
 # The physical environment is an idealised BATS-like seasonal cycle.
 # Both grazing treatments use the same 500 m column, 50 cells (10 m spacing),
 # 30-minute step, physical forcing and initial concentrations.
-grid = RectilinearGrid(size = 50, extent = 500meters,
-                       topology = (Flat, Flat, Bounded))
-time_step = 30minutes
-initial = initial_conditions()
-output_dir = get(ENV, "MASTS_OUTPUT_DIR",
-                 joinpath(@__DIR__, "..", "..", "outputs", "oceanbiome"))
-mkpath(output_dir)
-quick = "--quick" in ARGS
-make_plots = !quick || "--plot" in ARGS
+grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
+output_dir = results_directory("grazing")
 
 results = Dict{String, Any}()
 
@@ -48,28 +39,21 @@ results = Dict{String, Any}()
 
 for (label, grazing_rate) in (("control", 0.8 / day),
                               ("reduced_grazing", 0.4 / day))
+    local plankton, biogeochemistry, model, simulation, filename, d
 
     plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                          maximum_grazing_rate = grazing_rate)
 
     biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
 
-    model = NonhydrostaticModel(grid;
-                                closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
-                                                            ν = vertical_diffusivity,
-                                                            κ = vertical_diffusivity),
-                                biogeochemistry)
-
+    model = NonhydrostaticModel(grid; closure, biogeochemistry)
     set!(model; initial...)
-    sinking_cfl = sinking_courant(model, time_step)
-    isfinite(sinking_cfl) && sinking_cfl < 1 ||
-        error("Particle sinking CFL $sinking_cfl requires a shorter time step")
 
-    simulation = Simulation(model; Δt = time_step, stop_time = quick ? 2days : 365days)
+    simulation = Simulation(model; Δt = time_step, stop_time = 365days)
     filename = joinpath(output_dir, "$(label).jld2")
     simulation.output_writers[:profiles] = JLD2Writer(model, model.tracers;
                                                        filename,
-                                                       schedule = TimeInterval(quick ? 6hours : 1day),
+                                                       schedule = TimeInterval(1day),
                                                        overwrite_files = true)
     run!(simulation)
 
@@ -97,12 +81,9 @@ end
 # A difference panel complements each comparison. It reveals the change due
 # to reduced grazing even when the two trajectories nearly overlap.
 
-if make_plots
-    @eval using CairoMakie  # Activates the MASTSWorkshop plotting extension.
-    filename = joinpath(output_dir, "grazing_response.png")
-    plot_grazing_response(results["control"], results["reduced_grazing"], filename)
-    println("Saved $filename")
-end
+filename = joinpath(output_dir, "grazing_response.png")
+plot_grazing_response(results["control"], results["reduced_grazing"], filename)
+println("Saved $filename")
 
 #md # WORKSHOP_GRAZING_FIGURE
 
@@ -113,11 +94,9 @@ end
 # Z / (P + Z), is a bounded alternative to a potentially very large Z:P ratio.
 # Compare both experiments and their differences through the annual cycle.
 
-if make_plots
-    filename = joinpath(output_dir, "grazing_plankton_balance.png")
-    plot_plankton_balance(results["control"], results["reduced_grazing"], filename)
-    println("Saved $filename")
-end
+filename = joinpath(output_dir, "grazing_plankton_balance.png")
+plot_plankton_balance(results["control"], results["reduced_grazing"], filename)
+println("Saved $filename")
 
 #md # WORKSHOP_PLANKTON_BALANCE_FIGURE
 
@@ -128,11 +107,9 @@ end
 # particulate matter prescribed in the initial conditions; interpret later
 # changes alongside the developing phytoplankton and nutrient distributions.
 
-if make_plots
-    filename = joinpath(output_dir, "carbon_export.png")
-    plot_carbon_export(results["control"], results["reduced_grazing"], filename)
-    println("Saved $filename")
-end
+filename = joinpath(output_dir, "carbon_export.png")
+plot_carbon_export(results["control"], results["reduced_grazing"], filename)
+println("Saved $filename")
 
 #md # WORKSHOP_EXPORT_FIGURE
 

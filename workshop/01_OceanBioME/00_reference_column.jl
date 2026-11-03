@@ -8,30 +8,26 @@
 # From the repository root:
 #
 # ```bash
-# julia --project=oceanbiome oceanbiome/exercises/00_reference_column.jl
+# julia --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl
 # ```
 #
-# The default run is 365 days. Use `--quick` for a two-day check.
+# The simulation runs a full 365-day seasonal cycle.
 
 # ## Load OceanBioME and Oceananigans
 
 using OceanBioME, Oceananigans, CairoMakie
 using Oceananigans.Units
-using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
-using MASTSWorkshop: surface_PAR, vertical_diffusivity, initial_conditions,
-                     sinking_courant, diagnose_column, write_diagnostics, write_export_profile,
+import MASTSWorkshop
+using MASTSWorkshop: results_directory, diagnose_column, write_diagnostics, write_export_profile,
                      plot_vertical_evolution, plot_nitrogen_partition, plot_living_fraction,
                      plot_reference_export, plot_export_profile, plot_idealised_physics
 
 # ## Define the water column
 #
-# The 500 m column has 50 vertical cells (10 m spacing), with a
-# 30-minute time step and vertically implicit mixing.
+# The prepared BATS-like environment supplies the 500 m grid, 30-minute
+# time step, initial concentrations, light and vertically implicit mixing.
 
-grid = RectilinearGrid(size = 50, extent = 500meters,
-                       topology = (Flat, Flat, Bounded))
-time_step = 30minutes
-initial = initial_conditions()
+grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
 
 # ## Construct the biological model
 #
@@ -49,34 +45,22 @@ biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
 # `NonhydrostaticModel` is an Oceananigans constructor. The prescribed
 # vertical diffusivity mixes the seven tracers through the water column.
 
-model = NonhydrostaticModel(grid;
-                            closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
-                                                        ν = vertical_diffusivity,
-                                                        κ = vertical_diffusivity),
-                            biogeochemistry)
+model = NonhydrostaticModel(grid; closure, biogeochemistry)
 set!(model; initial...)
-
-# Particle sinking is explicit even when turbulent mixing is implicit.
-sinking_cfl = sinking_courant(model, time_step)
-isfinite(sinking_cfl) && sinking_cfl < 1 ||
-    error("Particle sinking CFL $sinking_cfl requires a shorter time step")
 
 # ## Run and save the simulation
 #
 # The output includes daily tracer profiles and diagnostics of sinking
 # organic-carbon export at 100 m and 300 m. Both depths coincide with grid
-# faces. The two-day option saves a profile every six hours.
+# faces. Profiles are saved daily throughout the year.
 
-quick = "--quick" in ARGS
-output_dir = get(ENV, "MASTS_OUTPUT_DIR",
-                 joinpath(@__DIR__, "..", "..", "outputs", "oceanbiome", "reference_column"))
-mkpath(output_dir)
+output_dir = results_directory("reference_column")
 
-simulation = Simulation(model; Δt = time_step, stop_time = quick ? 2days : 365days)
+simulation = Simulation(model; Δt = time_step, stop_time = 365days)
 filename = joinpath(output_dir, "reference_column.jld2")
 simulation.output_writers[:profiles] = JLD2Writer(model, model.tracers;
                                                    filename,
-                                                   schedule = TimeInterval(quick ? 6hours : 1day),
+                                                   schedule = TimeInterval(1day),
                                                    overwrite_files = true)
 run!(simulation)
 

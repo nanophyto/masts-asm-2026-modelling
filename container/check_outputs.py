@@ -1,4 +1,4 @@
-"""Check that both short workshop exercises generated their required outputs."""
+"""Check that both workshop exercises generated their required outputs."""
 
 from pathlib import Path
 import sys

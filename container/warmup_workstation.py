@@ -32,7 +32,7 @@ def fingerprint(source: Path = SOURCE, sysimage: Path = SYSIMAGE) -> str:
     for relative in (
         "oceanbiome/Project.toml",
         "oceanbiome/Manifest.toml",
-        "oceanbiome/exercises/00_reference_column.jl",
+        "workshop/01_OceanBioME/00_reference_column.jl",
         "oceanbiome/src/MASTSWorkshop.jl",
     ):
         path = source / relative
@@ -62,12 +62,12 @@ def stages(home: Path = HOME, workspace: Path = WORKSPACE,
     """Create real participant commands with distinct Julia 1.10/1.11 roles."""
     # Execute the immutable, tested example from the image. A participant may
     # have edited their own files; a startup task must respect those changes.
-    example = source / "oceanbiome/exercises/00_reference_column.jl"
+    example = source / "workshop/01_OceanBioME/00_reference_column.jl"
     if not example.is_file():
         raise FileNotFoundError(f"Workshop example is missing: {example}")
-    yield "Two-day OceanBioME reference and plots", [
+    yield "Annual OceanBioME reference and plots", [
         str(JULIA), "--threads=1", "--startup-file=no",
-        f"--project={source / 'oceanbiome'}", str(example), "--quick",
+        f"--project={source / 'oceanbiome'}", str(example),
     ], {"MASTS_OUTPUT_DIR": str(home / ".cache/masts-workshop/reference-output")}
 
     ls_env = extension / "scripts/environments/languageserver/v1.11"

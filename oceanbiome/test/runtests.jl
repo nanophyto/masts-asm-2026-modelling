@@ -1,6 +1,6 @@
 using Test, Pkg
 using OceanBioME, Oceananigans
-using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
+import MASTSWorkshop
 using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
                      face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
                      carbon_flux_mg_per_day, carbon_export_g_per_m2,
@@ -27,21 +27,30 @@ using Oceananigans.Units
     @test vertical_diffusivity(-5, 0) == vertical_diffusivity(0, 0, -5, 0)
 end
 
+@testset "Workshop output directory" begin
+    mktempdir() do temp
+        withenv("MASTS_OUTPUT_DIR" => joinpath(temp, "reference")) do
+            @test MASTSWorkshop.results_directory("reference_column") == joinpath(temp, "reference")
+            @test isdir(joinpath(temp, "reference"))
+        end
+    end
+end
+
 @testset "LOBSTER column and grazing response" begin
-    grid = RectilinearGrid(size = 50, extent = 500meters,
-                           topology = (Flat, Flat, Bounded))
-    initial = initial_conditions()
+    configuration = MASTSWorkshop.column(:BATS)
+    grid, time_step, initial, closure, light = configuration
+    @test time_step == 30minutes
+    @test keys(configuration) == (:grid, :time_step, :initial, :closure, :surface_PAR)
+    @test light === surface_PAR
+    @test initial == initial_conditions()
+    @test_throws ArgumentError MASTSWorkshop.column(:UNKNOWN)
 
     # Exercise the same native constructors and forcing as the teaching example.
     function column(grazing_rate)
         plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                              maximum_grazing_rate = grazing_rate)
-        biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
-        model = NonhydrostaticModel(grid;
-                                    closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
-                                                                ν = vertical_diffusivity,
-                                                                κ = vertical_diffusivity),
-                                    biogeochemistry)
+        biogeochemistry = LOBSTER(grid; plankton, surface_PAR = light, scale_negatives = true)
+        model = NonhydrostaticModel(grid; closure, biogeochemistry)
         set!(model; initial...)
         return model
     end
@@ -54,8 +63,8 @@ end
     @test all(interior(control.tracers.P) .== interior(reduced.tracers.P))
 
     for model in (control, reduced)
-        @test 0 <= sinking_courant(model, 30minutes) < 1
-        run!(Simulation(model; Δt = 30minutes, stop_time = 2days))
+        @test 0 <= sinking_courant(model, time_step) < 1
+        run!(Simulation(model; Δt = time_step, stop_time = 2days))
         for tracer in values(model.tracers)
             @test all(isfinite, interior(tracer))
             @test all(x -> x >= -1e-8, interior(tracer))

@@ -22,6 +22,6 @@ for enabled in 0 1; do
         export MASTS_OUTPUT_DIR=/tmp/workshop-benchmark
         /usr/bin/time -f "Elapsed: %e s; peak RSS: %M KB" \
           /opt/workshop/bin/julia --threads=1 --startup-file=no --project=oceanbiome \
-          oceanbiome/exercises/00_reference_column.jl --quick
+          workshop/01_OceanBioME/00_reference_column.jl
       '
 done

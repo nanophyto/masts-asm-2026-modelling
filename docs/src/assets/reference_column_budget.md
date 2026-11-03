@@ -6,7 +6,7 @@ the first saved inventory.
 
 | Experiment | Final residual | Maximum absolute residual |
 |:-----------|---------------:|--------------------------:|
-| Reference | 0.0% | 0.0% |
+| Reference | -0.0% | 0.0% |
 
 The acceptance threshold is 5% of the starting inventory. The
 diagnostic uses saved profiles and an upwind estimate of sinking flux.

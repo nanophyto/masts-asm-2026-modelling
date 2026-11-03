@@ -4,14 +4,14 @@ using Documenter, Literate
 
 root = normpath(joinpath(@__DIR__, ".."))
 scientific_project = joinpath(root, "oceanbiome")
-exercise_dir = joinpath(scientific_project, "exercises")
+exercise_dir = joinpath(root, "workshop", "01_OceanBioME")
 assets_dir = joinpath(@__DIR__, "src", "assets")
 generated_dir = joinpath(@__DIR__, "src", "generated")
 mkpath(assets_dir)
 mkpath(generated_dir)
 
-# PR builds validate plotting with short simulations. Full builds generate
-# reference assets for the published tutorial pages.
+# PR builds validate plotting using isolated output paths; full builds also
+# publish reference figures and console assets.
 quick = get(ENV, "DOCS_QUICK", "false") == "true"
 reuse_results = get(ENV, "DOCS_REUSE_RESULTS", "false") == "true"
 quick && reuse_results && error("DOCS_REUSE_RESULTS requires full-run reference outputs")
@@ -20,7 +20,6 @@ output_base = joinpath(root, "outputs", "oceanbiome", quick ? "docs_smoke" : "re
 function run_exercise(name, output_dir)
     exercise = joinpath(exercise_dir, name)
     command = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $exercise`
-    quick && (command = `$command --quick --plot`)
     output = cd(root) do
         read(addenv(command, "MASTS_OUTPUT_DIR" => output_dir), String)
     end
@@ -172,7 +171,7 @@ makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",
     modules = Module[],
     format = Documenter.HTML(prettyurls = get(ENV, "CI", "false") == "true",
-                             edit_link = "main"),
+                             edit_link = "main", inventory_version = ""),
     pages = [
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
