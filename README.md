@@ -65,7 +65,12 @@ Participant results are written under `workshop/results/` (ignored by Git).
 **Cycle 1.3b:** Documenter.jl tutorial with executed reference results and figure validation.
 Cycle 1.4 includes the combined Code OSS workshop image and an opt-in GHCR publication workflow. Abil.py is installed and import-tested; its exercises are prepared separately.
 
-The participant-facing folder is [`workshop/`](workshop/). Begin with the reference
+The participant-facing folder is [`workshop/`](workshop/). Cloud Workstations
+should be launched with `?folder=/home/user/masts-asm-2026-modelling/workshop`;
+the editor then opens the workshop README with only the exercises and results
+visible in Explorer. The [container instructions](container/README.md) describe
+how to generate individual links from the operator's workstation status table.
+Begin with the reference
 LOBSTER column and then change grazing:
 
 ```bash

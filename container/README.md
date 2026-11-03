@@ -31,17 +31,22 @@ docker run --privileged --rm -p 127.0.0.1:8080:80 \
 
 Open the workshop directly using this URL:
 
-`http://localhost:8080/?folder=/home/user/masts-asm-2026-modelling`
+`http://localhost:8080/?folder=/home/user/masts-asm-2026-modelling/workshop`
 
 The `folder` parameter is supported by Google's Code OSS and opens the
-editable repository in Explorer immediately. For Cloud Workstations, append
-`&folder=/home/user/masts-asm-2026-modelling` to the participant launch URL
+participant-only `workshop/` directory. The developer folders remain available
+inside the repository, and the examples import the package by its installed
+absolute project path. For Cloud Workstations, append
+`&folder=/home/user/masts-asm-2026-modelling/workshop` to the participant launch URL
 (or use `?folder=...` if that URL has no existing query parameters). Give
-participants this link so the repository is their initial workspace.
+participants this link so the exercises are their initial workspace.
+A new session opens `workshop/README.md` as its starting page.
 
-The initial UI has a dark theme, a visible repository Explorer and access to the terminal,
-no Welcome page, and a hidden Activity Bar, secondary sidebar, Source Control
-and built-in chat/AI UI. Google Cloud Code/Gemini and Data Agent integrations
+The initial UI uses a dark theme, the participant workspace and the terminal,
+a workshop README instead of the Welcome page, and a default-position Activity Bar.
+The secondary sidebar, Source Control and built-in chat/AI UI remain hidden. If Explorer was hidden in a previous
+session, use `Ctrl+B` then `Ctrl+Shift+E` to restore it.
+Google Cloud Code/Gemini and Data Agent integrations
 are removed from the image, including the `googlecloudtools.datacloud`
 Data Agent Kit identifier. Older installations in a participant's persistent
 editor profile are also cleaned up at startup. The Julia and Python language extensions are installed from pinned local
@@ -108,7 +113,9 @@ Machine defaults are seeded into
 `/home/user/.codeoss-cloudworkstations/data/Machine/settings.json` before
 Code OSS launches, including on an existing home volume. Existing participant
 settings take precedence and their files remain intact. Julia/Python paths
-remain defined in the repository's `.vscode/settings.json`.
+are written to `.vscode/settings.json` for both the repository root and the
+participant `workshop/` folder. The Julia environment
+points to the scientific project one level above `workshop/`.
 
 Files copied into the repository are writable and persist on the named Docker
 volume. The startup script initialises each new participant workspace once;
@@ -151,7 +158,7 @@ versions and reproduces the installation into a fresh image.
 
 ## Running a Julia script in the browser editor
 
-Open `workshop/01_OceanBioME/00_reference_column.jl` in Explorer. With the Julia extension loaded, `Ctrl+Shift+P` offers `Julia: Run File in
+Open `01_OceanBioME/00_reference_column.jl` in the participant Explorer. With the Julia extension loaded, `Ctrl+Shift+P` offers `Julia: Run File in
 New Process` and `Julia: Execute File in REPL`. Julia also contributes a
 Run action for `.jl` editors. Python contributes `Python: Run Python File in
 Terminal` for `.py` editors. Check both commands after the browser loads.
@@ -160,13 +167,14 @@ If a command is absent, inspect the installed extensions with the CLI above
 and use `Developer: Show Running Extensions` from `Ctrl+Shift+P`.
 
 For a full annual simulation, use **Terminal > New Terminal** from the
-repository root:
+participant `workshop/` folder:
 
 ```bash
-julia --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl
+julia --project=../oceanbiome 01_OceanBioME/00_reference_column.jl
 ```
 
-The script writes figures and diagnostics into `workshop/results/oceanbiome/`.
+The script writes figures and diagnostics into `results/oceanbiome/`,
+relative to the participant workspace; click the PNGs in Explorer to view them.
 
 ## Early workstation preparation and scientific startup timing (Cycle 1.6)
 
@@ -288,3 +296,18 @@ For the 4 November rehearsal, a validated ordinary image with early per-user
 warm-up is the minimum viable configuration. Enable the sysimage for the
 workshop once both cold and warm runs, diagnostics, and scientific figures pass
 and its speed-up is confirmed.
+
+## Participant links after each cloud deployment
+
+When Terraform recreates the cluster, fresh workstation URLs appear in
+`cloud-workshops` status output. From the `cloud-workshops` repository, generate
+ready-to-share links with the helper in this repository:
+
+```bash
+./scripts/workshop.sh status masts-2026 \n  | python ../masts-asm-2026-modelling/scripts/workstation_links.py
+```
+
+Add `--csv` to produce a CSV with workstation, assigned account and launch URL.
+Each link opens the `workshop/` folder. Share each account's link privately
+with its assigned participant; Google Workstations enforces the workstation IAM
+permissions on access. Link generation is local and makes no Cloud API calls.

@@ -10,11 +10,12 @@ idealised BATS-like water column, so you can focus on biological processes.
 
 Then open **`01_OceanBioME/01_grazing.jl`** to compare control and reduced grazing.
 Both scripts simulate a complete 365-day seasonal cycle. Images, profiles and
-CSV diagnostics are saved under **`results/oceanbiome/`**.
+CSV diagnostics are saved under **`results/oceanbiome/`**. Expand this folder
+in Explorer and click any PNG to inspect the corresponding figure.
 
 The **`02_Abil/`** material will provide the afternoon Python/ML exercises.
-For full explanations, questions and example figures, follow the workshop's
-[online documentation](../docs/src/index.md).
+For full explanations and example figures, see the workshop's
+[documentation source](../docs/src/index.md) (published as Documenter pages).
 
 In the terminal, from this folder, the reference can also be run with:
 

@@ -171,7 +171,7 @@ makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",
     modules = Module[],
     format = Documenter.HTML(prettyurls = get(ENV, "CI", "false") == "true",
-                             edit_link = "main"),
+                             edit_link = "main", inventory_version = ""),
     pages = [
         "Home" => "index.md",
         "Getting started" => "getting_started.md",

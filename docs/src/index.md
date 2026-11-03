@@ -10,6 +10,13 @@ This workshop introduces two approaches to marine biogeochemistry:
 - **Data-driven models:** Abil.py is available for the companion Python
   exercises.
 
+## Workshop workstation
+
+Open the personal workstation link provided by the instructor and sign in with
+your assigned `nanophyto.org` account. The editor starts inside the
+participant-friendly `workshop/` folder. See [Getting started](getting_started.md)
+for Julia REPL and figure-viewing instructions.
+
 ## Workshop walkthrough
 
 1. **[Run a reference column](generated/00_reference_column.md):** Build a

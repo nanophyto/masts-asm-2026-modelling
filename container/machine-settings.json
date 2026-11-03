@@ -1,7 +1,7 @@
 {
   "workbench.colorTheme": "Default Dark Modern",
   "window.autoDetectColorScheme": false,
-  "workbench.startupEditor": "none",
+  "workbench.startupEditor": "readme",
   "workbench.welcomePage.walkthroughs.openOnInstall": false,
   "workbench.tips.enabled": false,
   "workbench.editor.empty.hint": "hidden",

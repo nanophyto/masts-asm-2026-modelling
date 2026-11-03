@@ -24,7 +24,7 @@ class EditorConfigurationTests(unittest.TestCase):
         merge_defaults(self.defaults, self.settings)
         configured = json.loads(self.settings.read_text())
         self.assertEqual(configured["workbench.colorTheme"], "Default Dark Modern")
-        self.assertEqual(configured["workbench.startupEditor"], "none")
+        self.assertEqual(configured["workbench.startupEditor"], "readme")
         self.assertEqual(configured["workbench.activityBar.location"], "default")
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertFalse(configured["git.enabled"])
@@ -32,6 +32,12 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertIs(configured["julia.juliaup.install.hint"], False)
         self.assertIs(configured["julia.symbolCacheDownload"], True)
         self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
+
+    def test_participant_start_page_is_in_the_docker_context(self):
+        root = Path(__file__).resolve().parent.parent
+        self.assertTrue((root / "workshop/README.md").is_file())
+        self.assertTrue((root / "workshop/START_HERE.md").is_file())
+        self.assertTrue((root / "workshop/01_OceanBioME/00_reference_column.jl").is_file())
 
     def test_reuse_preserves_custom_settings_and_is_idempotent(self):
         self.settings.parent.mkdir(parents=True)

@@ -26,6 +26,8 @@ jobs:
         run: python -m unittest discover -s abil/tests -p 'test_*.py' -v
       - name: Test editor setup and persistent workstation warm-up
         run: python -m unittest discover -s container -p 'test_*.py' -v
+      - name: Test participant launch links
+        run: python -m unittest discover -s scripts -p 'test_*.py' -v
 
   julia:
     runs-on: ubuntu-latest
@@ -48,8 +50,8 @@ jobs:
         run: julia --startup-file=no --project=oceanbiome -e 'using Pkg; Pkg.instantiate()'
       - name: Test Julia imports and versions
         run: julia --startup-file=no --project=oceanbiome oceanbiome/test/runtests.jl
-      - name: Run short LOBSTER teaching exercise and check diagnostics
+      - name: Run annual grazing exercise and check diagnostics
         run: |
-          julia --startup-file=no --project=oceanbiome oceanbiome/exercises/01_grazing.jl --quick
-          test -s outputs/oceanbiome/control_diagnostics.csv
-          test -s outputs/oceanbiome/reduced_grazing_diagnostics.csv
+          julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
+          test -s workshop/results/oceanbiome/grazing/control_diagnostics.csv
+          test -s workshop/results/oceanbiome/grazing/reduced_grazing_diagnostics.csv
