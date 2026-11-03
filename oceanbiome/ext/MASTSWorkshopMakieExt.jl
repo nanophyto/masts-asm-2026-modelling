@@ -19,7 +19,7 @@ function compare_lines!(axis, control, reduced, metric)
 end
 
 # Show the evolving vertical structure of the main LOBSTER tracers.
-function MASTSWorkshop.plot_vertical_evolution(control, filename::AbstractString)
+function MASTSWorkshop.plot_vertical_evolution(control, filename::AbstractString; preview::Bool = isinteractive())
     figure = Figure(size = (1650, 900), fontsize = 15)
     tracer_panels = (
         (1, 1, "Zooplankton", control.vertical_Z),
@@ -37,6 +37,7 @@ function MASTSWorkshop.plot_vertical_evolution(control, filename::AbstractString
     end
 
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
@@ -204,7 +205,7 @@ function MASTSWorkshop.plot_idealised_physics(filename::AbstractString)
 end
 
 # The difference panels resolve a grazing response even when curves overlap.
-function MASTSWorkshop.plot_grazing_response(control, reduced, filename::AbstractString)
+function MASTSWorkshop.plot_grazing_response(control, reduced, filename::AbstractString; preview::Bool = isinteractive())
     matching_times(control, reduced)
     figure = Figure(size = (1100, 740), fontsize = 15)
     for (row, title, unit, metric) in ((1, "Phytoplankton", "mmol N m⁻³", d -> d.surface_P),
@@ -220,6 +221,7 @@ function MASTSWorkshop.plot_grazing_response(control, reduced, filename::Abstrac
         hlines!(difference_axis, [0.0]; color = :gray, linestyle = :dot)
     end
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 

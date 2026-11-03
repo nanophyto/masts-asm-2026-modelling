@@ -16,6 +16,8 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     @test Meta.parseall(read(joinpath(@__DIR__, "..", "ext", "MASTSWorkshopMakieExt.jl"), String)) isa Expr
 end
 
+include("plot_preview.jl")
+
 using Oceananigans.Fields: interior
 using Oceananigans.Units
 

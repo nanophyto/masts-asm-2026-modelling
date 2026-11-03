@@ -20,6 +20,7 @@
   "extensions.autoUpdate": false,
   "update.showReleaseNotes": false,
   "telemetry.telemetryLevel": "off",
+  "julia.usePlotPane": true,
   "julia.languageServerExecutablePath": "/opt/julia-ls/bin/julia",
   "julia.juliaup.install.hint": false,
   "julia.symbolCacheDownload": true

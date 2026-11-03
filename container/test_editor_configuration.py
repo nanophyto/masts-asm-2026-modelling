@@ -32,6 +32,11 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertIs(configured["julia.juliaup.install.hint"], False)
         self.assertIs(configured["julia.symbolCacheDownload"], True)
         self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
+        self.assertTrue(configured["julia.usePlotPane"])
+
+    def test_participant_workspace_uses_julia_plot_pane(self):
+        settings = json.loads((Path(__file__).with_name("workspace-settings.json")).read_text())
+        self.assertTrue(settings["julia.usePlotPane"])
 
     def test_workshop_source_edits_reuse_scientific_build_layers(self):
         dockerfile = Path(__file__).with_name("Dockerfile").read_text()
@@ -97,6 +102,7 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertEqual(configured["editor.fontSize"], 18)
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
+        self.assertTrue(configured["julia.usePlotPane"])
         initial_bytes = self.settings.read_bytes()
         merge_defaults(self.defaults, self.settings)
         self.assertEqual(self.settings.read_bytes(), initial_bytes)
