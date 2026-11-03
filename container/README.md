@@ -23,9 +23,29 @@ The first image build downloads and precompiles the complete environments.
 Subsequent changes to `workshop/` exercises, `oceanbiome/src/` helpers,
 `oceanbiome/ext/` plots or documentation reuse the Julia dependency and
 PackageCompiler layers. Only source copying and the lightweight workshop-package
-cache run again. Changing `oceanbiome/Project.toml` or `Manifest.toml`, the
-pinned editor dependencies or the stable sysimage workload rebuilds the
-corresponding cached environment.
+cache run again. The initial dependency layer uses a minimal
+`MASTSWorkshopMakieExt` entry point because the Julia project declares that
+extension; the real plotting implementation is copied with editable sources
+later in the build. Julia package downloads and precompilation also have
+separate cache layers. The optional PackageCompiler installation has its own
+cache layer. Changes to `container/precompile_reference.jl` reuse the Python,
+Julia package and PackageCompiler layers. The PackageCompiler workload imports
+only the pinned scientific libraries; the workshop tests exercise the actual
+column physics, output writers and figures. This avoids duplicating callback
+signatures in the sysimage build. Changes to `oceanbiome/Project.toml`
+or `Manifest.toml` refresh the corresponding dependency layers.
+
+The default `BUILD_WORKSHOP_SYSIMAGE=1` route includes a scientific sysimage.
+If PackageCompiler encounters a separate build problem, use the same build
+arguments and add `--build-arg COMPILE_WORKSHOP_SYSIMAGE=0`. This switch is
+introduced **after** the Python/Julia dependency and PackageCompiler layers,
+so the fallback rebuild reuses their caches and runs Julia with its regular
+precompiled dependencies through `/opt/workshop/bin/julia`. The regular smoke
+test is the acceptance test for either build mode.
+
+Build successfully before testing an image tag. If a build fails, Docker keeps
+that tag pointing to the previous successful image; the smoke test checks that
+the expected workshop exercises exist and reports stale images early.
 
 Cloud Workstations uses an immutable container digest: publish a new image and
 update the deployment's `IMAGE=` reference after editing source. Layer reuse
@@ -242,15 +262,21 @@ separate process also does not preserve all JIT-compiled methods by itself.
 ### Optional shared science sysimage
 
 To reduce compilation across separate Julia processes, test an image built
-with PackageCompiler 2.2.5. It uses a stable, two-day OceanBioME column and CairoMakie figure as the
-precompile workload and builds a portable generic x86-64 sysimage containing
-OceanBioME, Oceananigans and CairoMakie. The editable `MASTSWorkshop` package
+with PackageCompiler 2.2.5. It uses a stable import-only workload and builds
+a portable generic x86-64 sysimage containing OceanBioME, Oceananigans and
+CairoMakie. Model execution and figure generation use the tested workshop code
+in `oceanbiome/test/` and `scripts/test_container.sh`. The editable `MASTSWorkshop` package
 is loaded from the participant workspace, so students can change workshop
 code. The compiler is in a separate build-only environment.
 
 The optional build uses `JULIA_IMAGE_THREADS=1` for Julia's native image
-code generation, independently of `JULIA_NUM_THREADS=1`. The build also prints
-image-compilation timings and measures peak cgroup memory separately for
+code generation, independently of `JULIA_NUM_THREADS=1`. The final sysimage
+stage also sets `JULIA_NUM_PRECOMPILE_TASKS=1`, `OMP_NUM_THREADS=1`, and
+`MKL_NUM_THREADS=1`. This stage runs after the cached Python, Julia dependency,
+and PackageCompiler installation layers; changes to these limits retain those
+caches. The build prints the effective settings before starting compilation.
+These limits constrain parallelism but do not cap total sysimage memory use.
+The build also prints image-compilation timings and measures peak cgroup memory separately for
 PackageCompiler installation and system-image compilation, including child
 processes. Installation skips eager package precompilation to reduce memory
 pressure.
@@ -286,10 +312,10 @@ After a successful build, verify cold-run speed and scientific outputs:
 ./scripts/test_container.sh masts-asm-2026-modelling:sysimage
 ```
 
-If the reported peak remains high, the next controlled experiment is a smaller
-precompile workload (scientific calculations before full CairoMakie plotting).
-The ordinary image remains available with `BUILD_WORKSHOP_SYSIMAGE=0` and uses
-the same science environment.
+If PackageCompiler fails or uses excessive resources, use
+`--build-arg COMPILE_WORKSHOP_SYSIMAGE=0` with the same existing build arguments.
+This fallback preserves the cached Python/Julia layers and runs the same science
+environment without a custom sysimage.
 
 `/opt/workshop/bin/julia` automatically selects the sysimage if present. The
 VS Code Julia executable setting points to the same wrapper; the language
@@ -302,9 +328,9 @@ actual workstation architecture and shown to improve first-run performance.
 PackageCompiler can significantly increase build time, memory use and image
 size. Its baked dependency versions follow the pinned scientific environment.
 
-Build with `BUILD_WORKSHOP_SYSIMAGE=1` after verifying that the science image
-passes its reference and grazing smoke tests. The stable workload keeps edits
-to the student exercises independent from the expensive PackageCompiler step.
+Build with `BUILD_WORKSHOP_SYSIMAGE=1` and then run the reference and grazing
+smoke tests. The import-only workload keeps student-exercise edits independent
+from the expensive PackageCompiler step.
 
 ## Participant links after each cloud deployment
 
@@ -320,3 +346,24 @@ Add `--csv` to produce a CSV with workstation, assigned account and launch URL.
 Each link opens the `workshop/` folder. Share each account's link privately
 with its assigned participant; Google Workstations enforces the workstation IAM
 permissions on access. Link generation is local and makes no Cloud API calls.
+
+### Validate the compiled sysimage before deploying
+
+Build with `BUILD_WORKSHOP_SYSIMAGE=1` and `COMPILE_WORKSHOP_SYSIMAGE=1`,
+then run the fast acceptance test:
+
+```bash
+sudo ./scripts/test_sysimage.sh masts-asm-2026-modelling:sysimage
+```
+
+The script confirms that the workshop Julia launcher selects the compiled
+sysimage, runs both 2-day LOBSTER column variants from the Julia test suite,
+and writes a real CairoMakie physics figure. It performs the same checks with
+and without the sysimage in separately writable depots and prints elapsed
+time and peak memory for both configurations. The full 365-day reference and
+grazing exercises remain covered by `scripts/test_container.sh`.
+
+The sysimage includes Oceananigans, OceanBioME and CairoMakie. Its import-only
+precompile workload targets faster package loading; the measured 2-day
+test shows how much it also reduces startup for the actual column. Workstation
+warm-up runs the full annual example to prepare each participant's environment.

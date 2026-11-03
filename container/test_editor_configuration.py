@@ -44,6 +44,44 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertNotIn('include(', workload)
         self.assertNotIn('using MASTSWorkshop', workload)
 
+    def test_extension_stub_and_source_only_layers(self):
+        dockerfile = Path(__file__).with_name("Dockerfile").read_text()
+        pip_install = dockerfile.index("pip install --no-cache-dir")
+        extension_stub = dockerfile.index("mkdir -p /opt/workshop/source/oceanbiome/ext")
+        instantiate = dockerfile.index("-e 'using Pkg; Pkg.instantiate()'")
+        precompile = dockerfile.index("-e 'using Pkg; Pkg.precompile()'")
+        source_copy = dockerfile.index("COPY . /opt/workshop/source")
+        self.assertLess(pip_install, extension_stub)
+        self.assertLess(extension_stub, instantiate)
+        self.assertLess(instantiate, precompile)
+        self.assertLess(precompile, source_copy)
+        self.assertIn("module MASTSWorkshopMakieExt", dockerfile)
+        self.assertTrue((Path(__file__).parent.parent / "oceanbiome/ext/MASTSWorkshopMakieExt.jl").is_file())
+
+    def test_sysimage_workload_reuses_dependency_and_compiler_layers(self):
+        dockerfile = Path(__file__).with_name("Dockerfile").read_text()
+        self.assertLess(dockerfile.index("pip install --no-cache-dir"),
+                        dockerfile.index("-e 'using Pkg; Pkg.precompile()'"))
+        self.assertLess(dockerfile.index("-e 'using Pkg; Pkg.precompile()'"),
+                        dockerfile.index('Pkg.add(Pkg.PackageSpec(name="PackageCompiler"'))
+        self.assertLess(dockerfile.index("COPY container/measure_sysimage_memory.py"),
+                        dockerfile.index('Pkg.add(Pkg.PackageSpec(name="PackageCompiler"'))
+        self.assertLess(dockerfile.index('Pkg.add(Pkg.PackageSpec(name="PackageCompiler"'),
+                        dockerfile.index("COPY container/build_workshop_sysimage.jl"))
+        self.assertLess(dockerfile.index("COPY container/build_workshop_sysimage.jl"),
+                        dockerfile.index("container/precompile_reference.jl;"))
+        self.assertLess(dockerfile.index("container/precompile_reference.jl;"),
+                        dockerfile.index("MASTS_MEMORY_PHASE=create-sysimage"))
+        self.assertLess(dockerfile.index("MASTS_MEMORY_PHASE=create-sysimage"),
+                        dockerfile.index("COPY . /opt/workshop/source"))
+
+    def test_workshop_forcing_matches_oceananigans_callback_shapes(self):
+        physics = (Path(__file__).parent.parent / "oceanbiome/src/idealised_physics.jl").read_text()
+        for signature in ("surface_PAR(t) =", "surface_PAR(x, y, t) = surface_PAR(t)",
+                          "vertical_diffusivity(z, t) =",
+                          "vertical_diffusivity(x, y, z, t) = vertical_diffusivity(z, t)"):
+            self.assertIn(signature, physics)
+
     def test_participant_start_page_is_in_the_docker_context(self):
         root = Path(__file__).resolve().parent.parent
         self.assertTrue((root / "workshop/README.md").is_file())

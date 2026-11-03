@@ -64,8 +64,7 @@ RUN mkdir -p /opt/workshop/source/oceanbiome/src \
 COPY abil/requirements.txt /opt/workshop/source/abil/requirements.txt
 COPY container/workshop-julia /opt/workshop/bin/julia
 COPY container/ensure_language_extensions.py container/configure_editor.py \
-     container/measure_sysimage_memory.py container/build_workshop_sysimage.jl \
-     container/precompile_reference.jl /opt/workshop/source/container/
+     /opt/workshop/source/container/
 RUN chmod +x /opt/workshop/bin/julia
 WORKDIR /opt/workshop/source
 
@@ -90,19 +89,32 @@ RUN /opt/workshop/python/bin/python container/configure_editor.py remove-google-
 
 RUN /opt/workshop/python/bin/python -m pip install --no-cache-dir -r abil/requirements.txt
 
-# Precompile the third-party science dependencies independently of the
-# frequently edited MASTSWorkshop helpers, plotting extension and exercises.
+# The workshop Project.toml declares this Makie extension. Provide its minimal
+# entry point for dependency precompilation; the actual plotting source is
+# copied with the other editable workshop code near the end of the build.
+# This comes after pip so an extension fix reuses the expensive Python layer.
+RUN mkdir -p /opt/workshop/source/oceanbiome/ext \
+    && printf 'module MASTSWorkshopMakieExt\nend\n' \
+       > /opt/workshop/source/oceanbiome/ext/MASTSWorkshopMakieExt.jl
+
+# Precompile third-party science dependencies separately from frequently
+# edited workshop helpers, plotting methods and exercises. Instantiation is
+# cached independently, so a later compile failure retains downloaded packages.
 RUN mkdir -p /opt/workshop/julia-depot \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot JULIA_PKG_PRECOMPILE_AUTO=0 \
        julia --threads=1 --startup-file=no --project=oceanbiome \
-       -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()' \
+       -e 'using Pkg; Pkg.instantiate()'
+
+RUN JULIA_DEPOT_PATH=/opt/workshop/julia-depot JULIA_PKG_PRECOMPILE_AUTO=0 \
+      julia --threads=1 --startup-file=no --project=oceanbiome \
+      -e 'using Pkg; Pkg.precompile()' \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
        -e 'using OceanBioME, Oceananigans, CairoMakie'
 
-# Build-time JIT optimisation is opt-in until it has been timed and validated
-# on the actual amd64 workstation machine type. PackageCompiler is isolated
-# from the scientific Project/Manifest, which remain Julia 1.10 and editable.
+# Cache the optional PackageCompiler installation independently of workload
+# edits. Keep its memory measurements and the scientific Julia 1.10 project.
+COPY container/measure_sysimage_memory.py /opt/workshop/source/container/
 RUN set -eu; \
     if [ "$BUILD_WORKSHOP_SYSIMAGE" = "1" ]; then \
       apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*; \
@@ -112,6 +124,32 @@ RUN set -eu; \
         /opt/workshop/python/bin/python container/measure_sysimage_memory.py -- \
         /opt/julia/bin/julia --startup-file=no \
         -e 'using Pkg; Pkg.activate("/opt/workshop/sysimage-build"); Pkg.add(Pkg.PackageSpec(name="PackageCompiler", version="2.2.5"))'; \
+    fi
+
+# Changes to the precompile workload now reuse cached Python, Julia packages,
+# scientific precompilation and the PackageCompiler installation.
+COPY container/build_workshop_sysimage.jl container/precompile_reference.jl \
+     /opt/workshop/source/container/
+
+# Fallback control is deliberately declared after all costly dependency layers.
+# The default builds the sysimage; 0 keeps the fully precompiled regular Julia environment.
+ARG COMPILE_WORKSHOP_SYSIMAGE=1
+
+# Bound concurrent package-precompilation and native-library workers in the
+# sysimage build and runtime. Keep this ENV after dependency installation so
+# changing these limits never invalidates cached Python/Julia package layers.
+ENV JULIA_NUM_PRECOMPILE_TASKS=1 \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1
+
+# Check package imports before producing the scientific sysimage.
+RUN set -eu; \
+    if [ "$BUILD_WORKSHOP_SYSIMAGE" = "1" ] && [ "$COMPILE_WORKSHOP_SYSIMAGE" = "1" ]; then \
+      printf 'Sysimage concurrency: JULIA_NUM_THREADS=%s, JULIA_NUM_PRECOMPILE_TASKS=%s, JULIA_IMAGE_THREADS=%s, OPENBLAS_NUM_THREADS=%s, OMP_NUM_THREADS=%s, MKL_NUM_THREADS=%s\n' \
+        "$JULIA_NUM_THREADS" "$JULIA_NUM_PRECOMPILE_TASKS" "$SYSIMAGE_IMAGE_THREADS" "$OPENBLAS_NUM_THREADS" "$OMP_NUM_THREADS" "$MKL_NUM_THREADS"; \
+      JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
+        /opt/julia/bin/julia --threads=1 --startup-file=no \
+        --project=oceanbiome container/precompile_reference.jl; \
       MASTS_MEMORY_PHASE=create-sysimage \
       JULIA_IMAGE_THREADS="$SYSIMAGE_IMAGE_THREADS" JULIA_IMAGE_TIMINGS=1 \
       JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
@@ -131,7 +169,7 @@ COPY . /opt/workshop/source
 RUN /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_*.py' -v \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
-       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))'
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)); @assert !isempty(methods(MASTSWorkshop.plot_reference_export)); @assert !isempty(methods(MASTSWorkshop.plot_grazing_response))'
 
 # Warm the editable participant checkout at its eventual absolute path. This
 # cache is source-dependent; the third-party sysimage above is not.
@@ -141,7 +179,7 @@ RUN mkdir -p /home/user/masts-asm-2026-modelling \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no \
        --project=/home/user/masts-asm-2026-modelling/oceanbiome \
-       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))' \
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)); @assert !isempty(methods(MASTSWorkshop.plot_reference_export)); @assert !isempty(methods(MASTSWorkshop.plot_grazing_response))' \
     && rm -rf /home/user/masts-asm-2026-modelling
 
 # Executed by Google's standard entrypoint after user creation and before

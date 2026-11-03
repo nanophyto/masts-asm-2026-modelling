@@ -20,6 +20,14 @@ docker run --rm \
     --mount "type=bind,source=$output_dir,target=/results" \
     "$image" -euc '
         cd /opt/workshop/source
+        # Catch stale image tags immediately (e.g. after a failed docker build).
+        for example in workshop/01_OceanBioME/00_reference_column.jl \
+                       workshop/01_OceanBioME/01_grazing.jl; do
+            if [[ ! -f "$example" ]]; then
+                echo "ERROR: $example is absent from this image. A previous Docker build may have failed; rebuild successfully before running the smoke test." >&2
+                exit 1
+            fi
+        done
         python -m unittest discover -s abil/tests -p "test_*.py" -v
         python -m unittest discover -s container -p "test_*.py" -v
         python -m unittest discover -s scripts -p "test_*.py" -v
