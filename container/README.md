@@ -19,7 +19,17 @@ The smoke test runs the Python imports and short Julia reference/grazing
 experiments in the built image. It verifies PNGs and diagnostic CSVs. It runs the reference example twice. Its
 output includes `/usr/bin/time -v` elapsed time and peak resident memory for
 the Julia commands; results are written to `outputs/container-smoke/`.
-The very first image build downloads and precompiles the complete environments.
+The first image build downloads and precompiles the complete environments.
+Subsequent changes to `workshop/` exercises, `oceanbiome/src/` helpers,
+`oceanbiome/ext/` plots or documentation reuse the Julia dependency and
+PackageCompiler layers. Only source copying and the lightweight workshop-package
+cache run again. Changing `oceanbiome/Project.toml` or `Manifest.toml`, the
+pinned editor dependencies or the stable sysimage workload rebuilds the
+corresponding cached environment.
+
+Cloud Workstations uses an immutable container digest: publish a new image and
+update the deployment's `IMAGE=` reference after editing source. Layer reuse
+also avoids uploading unchanged dependency/sysimage layers to Artifact Registry.
 
 For a local check of Code OSS itself, start the Google base entrypoint:
 
@@ -72,7 +82,7 @@ avoid the extension's permission prompt while retaining its faster symbol
 index. These defaults also apply to participants reusing an existing home.
 
 Julia package caches are prepared during image construction. In addition to
-precompiling the `/opt/workshop/source` environment, the image now loads
+precompiling the dependencies before copying editable source, the image loads
 `MASTSWorkshop` at its final editable workspace path
 (`/home/user/masts-asm-2026-modelling`). On first startup the source is
 copied with original timestamps to help the Julia cache remain valid. Source
@@ -232,7 +242,7 @@ separate process also does not preserve all JIT-compiled methods by itself.
 ### Optional shared science sysimage
 
 To reduce compilation across separate Julia processes, test an image built
-with PackageCompiler 2.2.5. It uses the annual reference exercise as a
+with PackageCompiler 2.2.5. It uses a stable, two-day OceanBioME column and CairoMakie figure as the
 precompile workload and builds a portable generic x86-64 sysimage containing
 OceanBioME, Oceananigans and CairoMakie. The editable `MASTSWorkshop` package
 is loaded from the participant workspace, so students can change workshop
@@ -292,10 +302,9 @@ actual workstation architecture and shown to improve first-run performance.
 PackageCompiler can significantly increase build time, memory use and image
 size. Its baked dependency versions follow the pinned scientific environment.
 
-For the 4 November rehearsal, a validated ordinary image with early per-user
-warm-up is the minimum viable configuration. Enable the sysimage for the
-workshop once both cold and warm runs, diagnostics, and scientific figures pass
-and its speed-up is confirmed.
+Build with `BUILD_WORKSHOP_SYSIMAGE=1` after verifying that the science image
+passes its reference and grazing smoke tests. The stable workload keeps edits
+to the student exercises independent from the expensive PackageCompiler step.
 
 ## Participant links after each cloud deployment
 

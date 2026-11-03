@@ -55,10 +55,17 @@ RUN curl -fL --retry 4 --retry-delay 2 \
     && rm /tmp/miniforge.sh \
     && /opt/miniforge/bin/conda clean -afy
 
-# Keep the runnable package environment and precompiled dependencies outside
-# /home: Cloud Workstations mounts a persistent home volume at startup.
-COPY . /opt/workshop/source
+# Install the scientific environment from its dependency files first. An
+# existing Manifest.toml is honoured; an absent one is resolved at build time.
+# Keep the editable package code and exercises out of this cached layer.
+COPY oceanbiome/*.toml /opt/workshop/source/oceanbiome/
+RUN mkdir -p /opt/workshop/source/oceanbiome/src \
+    && printf 'module MASTSWorkshop\nend\n' > /opt/workshop/source/oceanbiome/src/MASTSWorkshop.jl
+COPY abil/requirements.txt /opt/workshop/source/abil/requirements.txt
 COPY container/workshop-julia /opt/workshop/bin/julia
+COPY container/ensure_language_extensions.py container/configure_editor.py \
+     container/measure_sysimage_memory.py container/build_workshop_sysimage.jl \
+     container/precompile_reference.jl /opt/workshop/source/container/
 RUN chmod +x /opt/workshop/bin/julia
 WORKDIR /opt/workshop/source
 
@@ -81,29 +88,17 @@ RUN mkdir -p /opt/workshop/vsix \
 RUN /opt/workshop/python/bin/python container/configure_editor.py remove-google-ai /opt/code-oss/extensions \
     && /opt/workshop/python/bin/python container/configure_editor.py remove-google-ai /opt/code-oss/resources/app/extensions
 
-RUN /opt/workshop/python/bin/python -m pip install --no-cache-dir -r abil/requirements.txt \
-    && /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_*.py' -v
+RUN /opt/workshop/python/bin/python -m pip install --no-cache-dir -r abil/requirements.txt
 
+# Precompile the third-party science dependencies independently of the
+# frequently edited MASTSWorkshop helpers, plotting extension and exercises.
 RUN mkdir -p /opt/workshop/julia-depot \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot JULIA_PKG_PRECOMPILE_AUTO=0 \
        julia --threads=1 --startup-file=no --project=oceanbiome \
        -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()' \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
-       -e 'using MASTSWorkshop, OceanBioME, Oceananigans, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))'
-
-# Also warm the editable participant checkout at its eventual absolute path.
-# Julia's compiled cache tracks source paths; the first workspace copy at
-# startup preserves source timestamps, so this cache can be reused. Keep the
-# built image's /home clean for Google Workstations' persistent home mount.
-RUN mkdir -p /home/user/masts-asm-2026-modelling \
-    && cp -R --preserve=mode,timestamps /opt/workshop/source/. \
-       /home/user/masts-asm-2026-modelling/ \
-    && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
-       julia --threads=1 --startup-file=no \
-       --project=/home/user/masts-asm-2026-modelling/oceanbiome \
-       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))' \
-    && rm -rf /home/user/masts-asm-2026-modelling
+       -e 'using OceanBioME, Oceananigans, CairoMakie'
 
 # Build-time JIT optimisation is opt-in until it has been timed and validated
 # on the actual amd64 workstation machine type. PackageCompiler is isolated
@@ -128,6 +123,26 @@ RUN set -eu; \
         --startup-file=no --project=oceanbiome \
         -e 'using OceanBioME, Oceananigans, CairoMakie'; \
     fi
+
+# Source-only edits begin here: Docker reuses the Julia/Python dependency and
+# sysimage layers above. Compiling MASTSWorkshop itself is intentionally late
+# so new helper/plot code is loaded from the actual participant checkout.
+COPY . /opt/workshop/source
+RUN /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_*.py' -v \
+    && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
+       julia --threads=1 --startup-file=no --project=oceanbiome \
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))'
+
+# Warm the editable participant checkout at its eventual absolute path. This
+# cache is source-dependent; the third-party sysimage above is not.
+RUN mkdir -p /home/user/masts-asm-2026-modelling \
+    && cp -R --preserve=mode,timestamps /opt/workshop/source/. \
+       /home/user/masts-asm-2026-modelling/ \
+    && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
+       julia --threads=1 --startup-file=no \
+       --project=/home/user/masts-asm-2026-modelling/oceanbiome \
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))' \
+    && rm -rf /home/user/masts-asm-2026-modelling
 
 # Executed by Google's standard entrypoint after user creation and before
 # Code OSS starts. The base entrypoint and editor scripts stay unchanged.

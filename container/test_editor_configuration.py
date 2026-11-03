@@ -33,6 +33,17 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertIs(configured["julia.symbolCacheDownload"], True)
         self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
 
+    def test_workshop_source_edits_reuse_scientific_build_layers(self):
+        dockerfile = Path(__file__).with_name("Dockerfile").read_text()
+        dependency_copy = dockerfile.index("COPY oceanbiome/*.toml")
+        sysimage_build = dockerfile.index("MASTS_MEMORY_PHASE=create-sysimage")
+        source_copy = dockerfile.index("COPY . /opt/workshop/source")
+        self.assertLess(dependency_copy, sysimage_build)
+        self.assertLess(sysimage_build, source_copy)
+        workload = Path(__file__).with_name("precompile_reference.jl").read_text()
+        self.assertNotIn('include(', workload)
+        self.assertNotIn('using MASTSWorkshop', workload)
+
     def test_participant_start_page_is_in_the_docker_context(self):
         root = Path(__file__).resolve().parent.parent
         self.assertTrue((root / "workshop/README.md").is_file())
