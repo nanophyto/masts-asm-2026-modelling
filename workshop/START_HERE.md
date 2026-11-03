@@ -1,9 +1,10 @@
 # MASTS ASM 2026 — Getting started with modelling
 
 **Start with `01_OceanBioME/00_reference_column.jl`.** Open it in the editor and
-choose **Julia: Execute File in REPL**. The reference overview appears in the
-Julia Plot Pane; the first run may take longer while Julia initialises. Reuse
-the same REPL for subsequent experiments.
+choose **Julia: Execute File in REPL**. Each figure appears in the Julia
+Plot Pane as it is created; use plot history to revisit earlier figures.
+The first run may take longer while Julia initialises. Reuse the same REPL
+for subsequent experiments.
 
 The examples use real `PhytoZoo`, `LOBSTER`, `NonhydrostaticModel`, `Simulation`,
 `JLD2Writer`, and `run!` calls. `MASTSWorkshop.column(:BATS)` prepares the

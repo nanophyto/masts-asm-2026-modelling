@@ -42,7 +42,7 @@ function MASTSWorkshop.plot_vertical_evolution(control, filename::AbstractString
 end
 
 # The seven tracers form four complementary nitrogen categories in the upper 100 m.
-function MASTSWorkshop.plot_nitrogen_partition(d, filename::AbstractString)
+function MASTSWorkshop.plot_nitrogen_partition(d, filename::AbstractString; preview::Bool = isinteractive())
     nitrogen = d.upper_100m
     categories = (("Inorganic (NO₃ + NH₄)", nitrogen.inorganic, :steelblue),
                   ("Living (P + Z)", nitrogen.living, :seagreen),
@@ -70,11 +70,12 @@ function MASTSWorkshop.plot_nitrogen_partition(d, filename::AbstractString)
     ylims!(fractions, 0, 100)
     axislegend(inventory; position = :rt, framevisible = false)
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
 # Compare living and dissolved-organic shares with particulate abundance.
-function MASTSWorkshop.plot_living_fraction(d, filename::AbstractString)
+function MASTSWorkshop.plot_living_fraction(d, filename::AbstractString; preview::Bool = isinteractive())
     particulate = d.vertical_P .+ d.vertical_Z .+ d.vertical_sPOM .+ d.vertical_bPOM
     figure = Figure(size = (1650, 530), fontsize = 15)
 
@@ -97,11 +98,12 @@ function MASTSWorkshop.plot_living_fraction(d, filename::AbstractString)
     Colorbar(figure[1, 6], amount_map; label = "mmol N m⁻³")
 
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
 # Examine the response of upper-ocean phytoplankton and zooplankton biomass.
-function MASTSWorkshop.plot_plankton_balance(control, reduced, filename::AbstractString)
+function MASTSWorkshop.plot_plankton_balance(control, reduced, filename::AbstractString; preview::Bool = isinteractive())
     matching_times(control, reduced)
     metrics = (("Phytoplankton", "mmol N m⁻²", d -> d.upper_100m.phytoplankton),
                ("Zooplankton", "mmol N m⁻²", d -> d.upper_100m.zooplankton),
@@ -119,11 +121,12 @@ function MASTSWorkshop.plot_plankton_balance(control, reduced, filename::Abstrac
         hlines!(difference_axis, [0.0]; color = :gray, linestyle = :dot)
     end
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
 # Plot the two sinking-flux horizons for a single reference simulation.
-function MASTSWorkshop.plot_reference_export(reference, filename::AbstractString)
+function MASTSWorkshop.plot_reference_export(reference, filename::AbstractString; preview::Bool = isinteractive())
     figure = Figure(size = (1100, 700), fontsize = 15)
     for (row, depth, particle_export) in ((1, 100, reference.export_100),
                                           (2, 300, reference.export_300))
@@ -137,11 +140,12 @@ function MASTSWorkshop.plot_reference_export(reference, filename::AbstractString
                color = blue, linewidth = 2.5)
     end
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
 # Compare the modelled depth-dependent sinking flux with a Martin-curve benchmark.
-function MASTSWorkshop.plot_export_profile(reference, filename::AbstractString)
+function MASTSWorkshop.plot_export_profile(reference, filename::AbstractString; preview::Bool = isinteractive())
     profile = reference.export_profile
     depths = profile.depths
     flux = profile.mean_daily_mg_C
@@ -173,11 +177,12 @@ function MASTSWorkshop.plot_export_profile(reference, filename::AbstractString)
     scatterlines!(integrated, profile.integrated_g_C, .-depths;
                   color = blue, markersize = 9, linewidth = 2.5)
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
 # Describe the physical environment actually used by the idealised column.
-function MASTSWorkshop.plot_idealised_physics(filename::AbstractString)
+function MASTSWorkshop.plot_idealised_physics(filename::AbstractString; preview::Bool = isinteractive())
     day_samples = collect(0:5:365)
     times = day_samples .* days
     depths = collect(range(-500.0, 0.0; length = 101))
@@ -201,6 +206,7 @@ function MASTSWorkshop.plot_idealised_physics(filename::AbstractString)
            color = :white, linewidth = 2)
     Colorbar(figure[2, 3], colors; label = "m² s⁻¹")
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
@@ -225,7 +231,7 @@ function MASTSWorkshop.plot_grazing_response(control, reduced, filename::Abstrac
     return filename
 end
 
-function MASTSWorkshop.plot_carbon_export(control, reduced, filename::AbstractString)
+function MASTSWorkshop.plot_carbon_export(control, reduced, filename::AbstractString; preview::Bool = isinteractive())
     matching_times(control, reduced)
     figure = Figure(size = (1550, 780), fontsize = 15)
     for (row, depth, get_export) in ((1, 100, d -> d.export_100),
@@ -247,6 +253,7 @@ function MASTSWorkshop.plot_carbon_export(control, reduced, filename::AbstractSt
         hlines!(difference_axis, [0.0]; color = :gray, linestyle = :dot)
     end
     save(filename, figure)
+    preview && display(figure)
     return filename
 end
 
