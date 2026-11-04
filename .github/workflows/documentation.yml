@@ -1,18 +1,13 @@
 name: Documentation and Pages
 
-# Test proposed changes on PRs, and run on main only after merge.
-# This avoids duplicate runs from a feature-branch push with an open PR.
+# One documentation build per PR update, then another on main for publication.
+# Feature-branch pushes are covered by the pull_request event.
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      full_build:
-        description: "Regenerate all annual scientific simulations and figures"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -30,37 +25,32 @@ jobs:
     env:
       JULIA_NUM_THREADS: "1"
       JULIA_PKG_PRECOMPILE_AUTO: "0"
-      # Fast default publishes all tutorial pages using committed figures.
-      # Manual full_build regenerates the simulations and figures.
-      DOCS_CONTENT_ONLY: ${{ inputs.full_build == true && 'false' || 'true' }}
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1.10'
+      # Cache Julia dependencies for speed; simulations and figures run afresh.
       - uses: julia-actions/cache@v3
         with:
           delete-old-caches: false
       - name: Instantiate documentation environment
         run: julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
-      - name: Build documentation
-        # Prevent docs/make.jl from invoking its legacy deploydocs branch;
-        # GitHub Pages deployment is handled below with official actions.
-        run: env -u GITHUB_ACTIONS julia --startup-file=no --project=docs docs/make.jl
-      - name: Verify generated pages and included figures
-        shell: bash
+      - name: Test documentation image validator
+        run: python3 -m unittest discover -s scripts -p 'test_documentation_images.py'
+      - name: Run all OceanBioME exercises and build documentation
+        env:
+          DOCS_QUICK: "false"
+          DOCS_CONTENT_ONLY: "false"
+          DOCS_REUSE_RESULTS: "false"
+        # Each build runs seven annual examples, checks their numerical
+        # diagnostics, and regenerates all 19 scientific PNG figures.
+        # GitHub Pages deployment is handled by the official actions below.
         run: |
-          set -euo pipefail
-          test -s docs/build/index.html
-          for page in 00_reference_column 01_grazing 02_sinking 03_remineralisation \
-                      04_light_affinity 05_nutrient_affinity 06_phytoplankton_mortality \
-                      physical_forcing; do
-            test -s "docs/build/generated/${page}/index.html" || {
-              echo "Missing generated documentation page: $page" >&2
-              exit 1
-            }
-          done
-          test -s docs/build/assets/reference_carbon_export.png
+          rm -rf outputs/oceanbiome/reference_docs
+          env -u GITHUB_ACTIONS julia --startup-file=no --project=docs docs/make.jl
+      - name: Verify generated pages and figure links
+        run: python3 scripts/check_documentation_images.py docs/build
       - name: Upload documentation artifact
         uses: actions/upload-artifact@v4
         with:

@@ -84,8 +84,8 @@ else
      run_exercise("01_grazing.jl", grazing_dir))
 end
 
-# Fast PR documentation checks generate the new pages without re-running
-# another ten annual simulations. Published full builds generate their figures.
+# Full documentation builds run all parameter experiments; DOCS_QUICK
+# remains available as a local smoke-test option.
 for (script, experiment, _) in parameter_exercises
     parameter_outputs[experiment] = (quick || reuse_results || content_only) ? nothing : run_exercise(script, joinpath(output_base, experiment))
 end
@@ -170,8 +170,11 @@ function asset_text(filename)
     isfile(path) ? read(path, String) : reference_note
 end
 function figure_block(filename, caption)
-    isfile(joinpath(assets_dir, filename)) ?
-        "![$caption](../assets/$filename)" : "**$caption:** $reference_note"
+    path = joinpath(assets_dir, filename)
+    if !isfile(path) && !quick
+        error("Missing documentation figure: $(path). Run a full documentation build to generate it.")
+    end
+    isfile(path) ? "![$caption](../assets/$filename)" : "**$caption:** $reference_note"
 end
 
 function make_tutorial(filename, replacements)
