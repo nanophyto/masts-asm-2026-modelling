@@ -112,7 +112,8 @@ println("Saved $(modified_file) and CSV summaries")
 
 response_figure_path = joinpath(output_dir, "remineralisation_response.png")
 plot_parameter_response(control_results, modified_results, response_figure_path;
-                        label = "Faster remineralisation")
+                        label = "Faster remineralisation",
+                        figure_title = "Remineralisation — surface response and detritus")
 println("Saved $response_figure_path")
 
 #md # WORKSHOP_PARAMETER_RESPONSE_FIGURE
@@ -125,7 +126,8 @@ println("Saved $response_figure_path")
 
 export_figure_path = joinpath(output_dir, "remineralisation_export.png")
 plot_parameter_export(control_results, modified_results, export_figure_path;
-                      label = "Faster remineralisation")
+                      label = "Faster remineralisation",
+                      figure_title = "Remineralisation — carbon export")
 println("Saved $export_figure_path")
 
 #md # WORKSHOP_PARAMETER_EXPORT_FIGURE

@@ -1,8 +1,8 @@
 # # Experiment: What happens when phytoplankton mortality increases?
 #
-# Phytoplankton cells are removed by grazing and by other loss processes, including
-# mortality. Increasing mortality provides a simple, virus-like loss scenario and lets
-# us investigate where the lost biomass goes.
+# Phytoplankton cells are removed by grazing mortality, and sinking.
+# Mortality includes unresolved grazing, and sensensence but primarily represents viral lysis. 
+# Here, we explore the impact of increasing phytoplankton mortality on stock and particulate carbon export.
 #
 # Both simulations run a full 365-day seasonal cycle.
 
@@ -27,12 +27,7 @@ output_dir = results_directory("phytoplankton_mortality")
 #
 # LOBSTER uses a density-dependent phytoplankton loss term m * P^2. We change the
 # coefficient m; the model routes this lost biomass through the configured waste
-# pathways. Viruses are a motivating biological interpretation, not an explicitly
-# simulated tracer.
-#
-# This coefficient multiplies P squared; it is not a fixed fraction dying per day. The
-# experiment represents a virus-like mortality pathway without resolving infection
-# dynamics.
+# pathways. 
 
 # ## Control experiment: reference biology
 #
@@ -121,7 +116,8 @@ println("Modified: nitrogen budget residual = ", last(modified_results.budget_re
 
 response_figure_path = joinpath(output_dir, "phytoplankton_mortality_response.png")
 plot_parameter_response(control_results, modified_results, response_figure_path;
-                        label = "Higher phytoplankton mortality")
+                        label = "Higher phytoplankton mortality",
+                        figure_title = "Phytoplankton mortality — surface response and detritus")
 println("Saved $response_figure_path")
 
 #md # WORKSHOP_PARAMETER_RESPONSE_FIGURE
@@ -133,7 +129,8 @@ println("Saved $response_figure_path")
 
 export_figure_path = joinpath(output_dir, "phytoplankton_mortality_export.png")
 plot_parameter_export(control_results, modified_results, export_figure_path;
-                      label = "Higher phytoplankton mortality")
+                      label = "Higher phytoplankton mortality",
+                      figure_title = "Phytoplankton mortality — carbon export")
 println("Saved $export_figure_path")
 
 #md # WORKSHOP_PARAMETER_EXPORT_FIGURE

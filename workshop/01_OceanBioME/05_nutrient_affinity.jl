@@ -117,7 +117,8 @@ println("Modified: nitrogen budget residual = ", last(modified_results.budget_re
 
 response_figure_path = joinpath(output_dir, "nutrient_affinity_response.png")
 plot_parameter_response(control_results, modified_results, response_figure_path;
-                        label = "Higher nitrate affinity")
+                        label = "Higher nitrate affinity",
+                        figure_title = "Nutrient affinity — surface response and detritus")
 println("Saved $response_figure_path")
 
 #md # WORKSHOP_PARAMETER_RESPONSE_FIGURE
@@ -129,7 +130,8 @@ println("Saved $response_figure_path")
 
 export_figure_path = joinpath(output_dir, "nutrient_affinity_export.png")
 plot_parameter_export(control_results, modified_results, export_figure_path;
-                      label = "Higher nitrate affinity")
+                      label = "Higher nitrate affinity",
+                      figure_title = "Nutrient affinity — carbon export")
 println("Saved $export_figure_path")
 
 #md # WORKSHOP_PARAMETER_EXPORT_FIGURE

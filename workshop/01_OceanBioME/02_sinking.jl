@@ -111,7 +111,8 @@ println("Saved $(modified_file) and CSV summaries")
 
 response_figure_path = joinpath(output_dir, "sinking_response.png")
 plot_parameter_response(control_results, modified_results, response_figure_path;
-                        label = "Slower sinking")
+                        label = "Slower sinking",
+                        figure_title = "Particle sinking — surface response and detritus")
 println("Saved $response_figure_path")
 
 #md # WORKSHOP_PARAMETER_RESPONSE_FIGURE
@@ -124,7 +125,8 @@ println("Saved $response_figure_path")
 
 export_figure_path = joinpath(output_dir, "sinking_export.png")
 plot_parameter_export(control_results, modified_results, export_figure_path;
-                      label = "Slower sinking")
+                      label = "Slower sinking",
+                      figure_title = "Particle sinking — carbon export")
 println("Saved $export_figure_path")
 
 #md # WORKSHOP_PARAMETER_EXPORT_FIGURE

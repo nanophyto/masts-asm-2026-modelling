@@ -121,7 +121,8 @@ println("Saved $reduced_file and diagnostics CSV")
 # to reduced grazing even when the two trajectories nearly overlap.
 
 grazing_figure_path = joinpath(output_dir, "grazing_response.png")
-plot_grazing_response(control_results, reduced_results, grazing_figure_path)
+plot_grazing_response(control_results, reduced_results, grazing_figure_path;
+                      figure_title = "Grazing experiment — surface phytoplankton and nitrate")
 println("Saved $grazing_figure_path")
 
 #md # WORKSHOP_GRAZING_FIGURE
@@ -134,7 +135,8 @@ println("Saved $grazing_figure_path")
 # Compare both experiments and their differences through the annual cycle.
 
 plankton_figure_path = joinpath(output_dir, "grazing_plankton_balance.png")
-plot_plankton_balance(control_results, reduced_results, plankton_figure_path)
+plot_plankton_balance(control_results, reduced_results, plankton_figure_path;
+                     figure_title = "Grazing experiment — upper-100 m plankton inventories")
 println("Saved $plankton_figure_path")
 
 #md # WORKSHOP_PLANKTON_BALANCE_FIGURE
@@ -147,7 +149,8 @@ println("Saved $plankton_figure_path")
 # changes alongside the developing phytoplankton and nutrient distributions.
 
 export_figure_path = joinpath(output_dir, "carbon_export.png")
-plot_carbon_export(control_results, reduced_results, export_figure_path)
+plot_carbon_export(control_results, reduced_results, export_figure_path;
+                   figure_title = "Grazing experiment — carbon export")
 println("Saved $export_figure_path")
 
 #md # WORKSHOP_EXPORT_FIGURE
