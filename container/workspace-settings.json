@@ -1,5 +1,6 @@
 {
   "julia.executablePath": "/opt/workshop/bin/julia",
+  "julia.usePlotPane": true,
   "julia.languageServerExecutablePath": "/opt/julia-ls/bin/julia",
   "julia.environmentPath": "__WORKSPACE__/oceanbiome",
   "julia.additionalArgs": ["--threads=1"],

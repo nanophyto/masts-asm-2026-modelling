@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 from configure_editor import merge_defaults, migrate_workshop_julia_executable, remove_google_ai_extensions
-from ensure_language_extensions import EXTENSIONS, ensure_extensions, verify_vsix_files
+from ensure_language_extensions import EXTENSIONS, LANGUAGE_EXTENSIONS, ensure_extensions, verify_vsix_files
 
 
 class EditorConfigurationTests(unittest.TestCase):
@@ -25,13 +25,18 @@ class EditorConfigurationTests(unittest.TestCase):
         configured = json.loads(self.settings.read_text())
         self.assertEqual(configured["workbench.colorTheme"], "Default Dark Modern")
         self.assertEqual(configured["workbench.startupEditor"], "readme")
-        self.assertEqual(configured["workbench.activityBar.location"], "default")
+        self.assertEqual(configured["workbench.activityBar.location"], "hidden")
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertFalse(configured["git.enabled"])
         self.assertFalse(configured["extensions.autoUpdate"])
         self.assertIs(configured["julia.juliaup.install.hint"], False)
         self.assertIs(configured["julia.symbolCacheDownload"], True)
         self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
+        self.assertTrue(configured["julia.usePlotPane"])
+
+    def test_participant_workspace_uses_julia_plot_pane(self):
+        settings = json.loads((Path(__file__).with_name("workspace-settings.json")).read_text())
+        self.assertTrue(settings["julia.usePlotPane"])
 
     def test_workshop_source_edits_reuse_scientific_build_layers(self):
         dockerfile = Path(__file__).with_name("Dockerfile").read_text()
@@ -82,6 +87,16 @@ class EditorConfigurationTests(unittest.TestCase):
                           "vertical_diffusivity(x, y, z, t) = vertical_diffusivity(z, t)"):
             self.assertIn(signature, physics)
 
+    def test_source_refresh_inherits_sysimage_without_compilation(self):
+        folder = Path(__file__).parent
+        dockerfile = (folder / "Dockerfile.refresh").read_text()
+        self.assertIn("FROM ${BASE_IMAGE}", dockerfile)
+        self.assertIn("cmp /tmp/refresh-env/Project.toml", dockerfile)
+        self.assertIn("COPY . /opt/workshop/source", dockerfile)
+        self.assertNotIn("create_sysimage(", dockerfile)
+        self.assertIn("ENV MASTS_WARMUP_ON_START=1", dockerfile)
+        self.assertIn("ENV MASTS_WARMUP_ON_START=1", (folder / "Dockerfile").read_text())
+
     def test_participant_start_page_is_in_the_docker_context(self):
         root = Path(__file__).resolve().parent.parent
         self.assertTrue((root / "workshop/README.md").is_file())
@@ -97,9 +112,27 @@ class EditorConfigurationTests(unittest.TestCase):
         self.assertEqual(configured["editor.fontSize"], 18)
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertEqual(configured["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
+        self.assertTrue(configured["julia.usePlotPane"])
         initial_bytes = self.settings.read_bytes()
         merge_defaults(self.defaults, self.settings)
         self.assertEqual(self.settings.read_bytes(), initial_bytes)
+
+    def test_migrates_activity_bar_from_previous_workshop_default(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text('{"workbench.activityBar.location":"default","editor.fontSize":18}\n')
+        merge_defaults(self.defaults, self.settings)
+        configured = json.loads(self.settings.read_text())
+        self.assertEqual(configured["workbench.activityBar.location"], "hidden")
+        self.assertEqual(configured["editor.fontSize"], 18)
+        original = self.settings.read_bytes()
+        merge_defaults(self.defaults, self.settings)
+        self.assertEqual(self.settings.read_bytes(), original)
+
+    def test_keeps_participant_activity_bar_choice(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text('{"workbench.activityBar.location":"top"}\n')
+        merge_defaults(self.defaults, self.settings)
+        self.assertEqual(json.loads(self.settings.read_text())["workbench.activityBar.location"], "top")
 
     def test_does_not_replace_invalid_persistent_settings(self):
         self.settings.parent.mkdir(parents=True)
@@ -133,6 +166,7 @@ class EditorConfigurationTests(unittest.TestCase):
             ("cloudcode", "GoogleCloudTools", "cloudcode"),
             ("gemini", "Google", "geminicodeassist"),
             ("dataagent", "GoogleCloudTools", "dataagentkit"),
+            ("antigravity", "Google", "google-antigravity"),
             ("datacloud", "googlecloudtools", "datacloud"),
             ("hyphenated", "GoogleCloudTools", "data-agent-kit"),
             ("julia", "julialang", "language-julia"),
@@ -144,12 +178,12 @@ class EditorConfigurationTests(unittest.TestCase):
                 "publisher": publisher, "name": name,
             }))
         removed = remove_google_ai_extensions(base)
-        self.assertEqual(len(removed), 5)
+        self.assertEqual(len(removed), 6)
         self.assertEqual(sorted(path.name for path in base.iterdir()), ["julia", "workstations"])
         self.assertEqual(remove_google_ai_extensions(base), [])
 
 
-class LanguageExtensionTests(unittest.TestCase):
+class WorkshopExtensionTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -172,6 +206,23 @@ class LanguageExtensionTests(unittest.TestCase):
             dockerfile,
         )
 
+    def test_csv_extension_is_pinned_after_sysimage_in_both_builds(self):
+        folder = Path(__file__).parent
+        extension = "devyas319.csv-interactive-table-viewer"
+        self.assertEqual(EXTENSIONS[extension], ("csv.vsix", "0.1.5"))
+        for name in ("Dockerfile", "Dockerfile.refresh"):
+            dockerfile = (folder / name).read_text()
+            self.assertIn("ARG CSV_EXTENSION_VERSION=0.1.5", dockerfile)
+            self.assertIn("/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/", dockerfile)
+            self.assertIn("/opt/workshop/vsix/csv.vsix", dockerfile)
+            self.assertLess(dockerfile.index("COPY . /opt/workshop/source"),
+                            dockerfile.index("ARG CSV_EXTENSION_VERSION=0.1.5"))
+        self.assertLess((folder / "Dockerfile").read_text().index("MASTS_MEMORY_PHASE=create-sysimage"),
+                        (folder / "Dockerfile").read_text().index("ARG CSV_EXTENSION_VERSION=0.1.5"))
+        self.assertIn("verify-language", (folder / "Dockerfile").read_text())
+        self.assertIn("COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py",
+                      (folder / "Dockerfile.refresh").read_text())
+
     def test_language_server_runtime_is_independent_of_science_julia(self):
         dockerfile = Path(__file__).with_name("Dockerfile").read_text()
         machine = json.loads(Path(__file__).with_name("machine-settings.json").read_text())
@@ -184,7 +235,7 @@ class LanguageExtensionTests(unittest.TestCase):
         self.assertEqual(workspace["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
         self.assertEqual(machine["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
 
-    def test_pinned_archives_identify_both_languages(self):
+    def test_pinned_archives_identify_workshop_extensions(self):
         verify_vsix_files(self.vsix_dir)
         with ZipFile(self.vsix_dir / "python.vsix", "w") as archive:
             archive.writestr("extension/package.json", json.dumps({
@@ -196,25 +247,26 @@ class LanguageExtensionTests(unittest.TestCase):
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_installs_missing_extensions_and_checks_registration(self, listed, run):
-        listed.side_effect = ["", "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\n"]
+        listed.side_effect = ["", "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n"]
         ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
-        self.assertEqual(run.call_count, 2)
+        self.assertEqual(run.call_count, 3)
         self.assertEqual(run.call_args_list, [
             call(["/editor/codeoss", "--install-extension", str(self.vsix_dir / "julia.vsix"), "--force", "--do-not-include-pack-dependencies"], check=True),
             call(["/editor/codeoss", "--install-extension", str(self.vsix_dir / "python.vsix"), "--force", "--do-not-include-pack-dependencies"], check=True),
+            call(["/editor/codeoss", "--install-extension", str(self.vsix_dir / "csv.vsix"), "--force", "--do-not-include-pack-dependencies"], check=True),
         ])
 
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_existing_matching_versions_are_idempotent(self, listed, run):
-        listed.return_value = "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\n"
+        listed.return_value = "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n"
         ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
         run.assert_not_called()
 
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_fails_if_editor_does_not_register_language_extension(self, listed, run):
-        listed.side_effect = ["ms-python.python@2026.4.0\n", "ms-python.python@2026.4.0\n"]
+        listed.side_effect = ["ms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n", "ms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n"]
         with self.assertRaisesRegex(RuntimeError, "julialang.language-julia"):
             ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
         self.assertEqual(run.call_count, 1)

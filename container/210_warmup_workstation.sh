@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start this optional task during the operator's early workstation start.
-# It prepares persistent per-user editor caches and runs a annual science
-# check in a private cache directory, without blocking Code OSS startup.
-if [[ "${MASTS_WARMUP_ON_START:-0}" != "1" ]]; then
+# Prepare persistent per-user editor caches and a short science check.
+# Runs in the background without blocking Code OSS startup.
+if [[ "${MASTS_WARMUP_ON_START:-1}" != "1" ]]; then
     exit 0
 fi
 id user >/dev/null

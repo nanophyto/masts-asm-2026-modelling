@@ -13,14 +13,11 @@ id "$username" >/dev/null
 mkdir -p "$home_dir"
 chown "$(id -u "$username"):$(id -g "$username")" "$home_dir"
 
-# Seed editable examples once per participant; preserve subsequent edits.
-if [[ ! -f "$workspace/README.md" ]]; then
-    runuser -u "$username" -- mkdir -p "$workspace"
-    # Preserve source modification times, allowing the image's precompiled
-    # workshop module to be reused at its runtime source path.
-    runuser -u "$username" -- cp -R --preserve=mode,timestamps \
-        /opt/workshop/source/. "$workspace/"
-fi
+# Seed missing workshop files on each start, preserving participant edits.
+# Preserved timestamps allow reuse of Julia caches at this absolute path.
+runuser -u "$username" -- mkdir -p "$workspace"
+runuser -u "$username" -- cp -R --no-clobber --preserve=mode,timestamps \
+    /opt/workshop/source/. "$workspace/"
 
 # Default editor settings, only on the first run.
 for settings_dir in "$workspace/.vscode" "$workspace/workshop/.vscode"; do

@@ -79,7 +79,7 @@ RUN mkdir -p /opt/workshop/vsix \
     && curl -fL --retry 4 --retry-delay 2 \
       "https://open-vsx.org/api/ms-python/python/${PYTHON_EXTENSION_VERSION}/file/ms-python.python-${PYTHON_EXTENSION_VERSION}.vsix" \
       -o /opt/workshop/vsix/python.vsix \
-    && /opt/workshop/python/bin/python container/ensure_language_extensions.py verify /opt/workshop/vsix
+    && /opt/workshop/python/bin/python container/ensure_language_extensions.py verify-language /opt/workshop/vsix
 
 
 # The Google base includes Cloud Code (and hence Gemini); workshop users
@@ -166,6 +166,15 @@ RUN set -eu; \
 # sysimage layers above. Compiling MASTSWorkshop itself is intentionally late
 # so new helper/plot code is loaded from the actual participant checkout.
 COPY . /opt/workshop/source
+
+# Small editor-only addon: download after PackageCompiler so it never
+# invalidates the expensive Julia sysimage layers.
+ARG CSV_EXTENSION_VERSION=0.1.5
+RUN curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/devyas319.csv-interactive-table-viewer-${CSV_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/csv.vsix \
+    && /opt/workshop/python/bin/python container/ensure_language_extensions.py verify /opt/workshop/vsix
+
 RUN /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_*.py' -v \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
@@ -192,6 +201,8 @@ COPY container/workspace-settings.json /opt/workshop/workspace-settings.json
 COPY container/machine-settings.json /opt/workshop/machine-settings.json
 COPY container/configure_editor.py /opt/workshop/configure_editor.py
 COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
+# Warm per-user editor caches during operator-started workstation preparation.
+ENV MASTS_WARMUP_ON_START=1
 RUN chmod +x /etc/workstation-startup.d/100_seed-workshop.sh /etc/workstation-startup.d/120_install_language_extensions.sh /etc/workstation-startup.d/210_warmup_workstation.sh
 
 EXPOSE 80

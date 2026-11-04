@@ -28,12 +28,16 @@ TIMEOUT_SECONDS = 900
 
 def fingerprint(source: Path = SOURCE, sysimage: Path = SYSIMAGE) -> str:
     """Invalidate a completed warm-up after an image/science update."""
-    digest = hashlib.sha256(b"masts-warmup-v1;Julia1.10.12;LS1.11.9;extension1.250.2")
+    digest = hashlib.sha256(b"masts-warmup-v2;Julia1.10.12;LS1.11.9;extension1.250.2")
     for relative in (
         "oceanbiome/Project.toml",
         "oceanbiome/Manifest.toml",
-        "workshop/01_OceanBioME/00_reference_column.jl",
+        "container/warmup_science.jl",
         "oceanbiome/src/MASTSWorkshop.jl",
+        "oceanbiome/src/column_configuration.jl",
+        "oceanbiome/src/column_diagnostics.jl",
+        "oceanbiome/src/idealised_physics.jl",
+        "oceanbiome/ext/MASTSWorkshopMakieExt.jl",
     ):
         path = source / relative
         digest.update(relative.encode())
@@ -59,17 +63,7 @@ def ready(cache: Path, expected: str) -> bool:
 
 def stages(home: Path = HOME, workspace: Path = WORKSPACE,
            extension: Path = EXTENSION, source: Path = SOURCE):
-    """Create real participant commands with distinct Julia 1.10/1.11 roles."""
-    # Execute the immutable, tested example from the image. A participant may
-    # have edited their own files; a startup task must respect those changes.
-    example = source / "workshop/01_OceanBioME/00_reference_column.jl"
-    if not example.is_file():
-        raise FileNotFoundError(f"Workshop example is missing: {example}")
-    yield "Annual OceanBioME reference and plots", [
-        str(JULIA), "--threads=1", "--startup-file=no",
-        f"--project={source / 'oceanbiome'}", str(example),
-    ], {"MASTS_OUTPUT_DIR": str(home / ".cache/masts-workshop/reference-output")}
-
+    """Prepare editor caches first, then check the two-day scientific path."""
     ls_env = extension / "scripts/environments/languageserver/v1.11"
     if not (ls_env / "Project.toml").is_file():
         raise FileNotFoundError(f"Julia language-server environment is missing: {ls_env}")
@@ -78,13 +72,21 @@ def stages(home: Path = HOME, workspace: Path = WORKSPACE,
         "-e", "using LanguageServer",
     ], {}
 
-    # The extension names its Julia 1.10 REPL environment terminalserver.
     repl_env = extension / "scripts/environments/terminalserver/v1.10"
-    if (repl_env / "Project.toml").is_file():
-        yield "Julia 1.10 editor REPL", [
-            "/opt/julia/bin/julia", "--startup-file=no", f"--project={repl_env}",
-            "-e", "using VSCodeServer",
-        ], {}
+    if not (repl_env / "Project.toml").is_file():
+        raise FileNotFoundError(f"Julia terminal-server environment is missing: {repl_env}")
+    yield "Julia 1.10 editor REPL", [
+        "/opt/julia/bin/julia", "--startup-file=no", f"--project={repl_env}",
+        "-e", "using VSCodeServer",
+    ], {}
+
+    example = source / "container/warmup_science.jl"
+    if not example.is_file():
+        raise FileNotFoundError(f"Science warm-up is missing: {example}")
+    yield "Two-day OceanBioME science and figure", [
+        str(JULIA), "--threads=1", "--startup-file=no",
+        f"--project={source / 'oceanbiome'}", str(example),
+    ], {"MASTS_OUTPUT_DIR": str(home / ".cache/masts-workshop/reference-output")}
 
 
 def run_warmup(home: Path = HOME, workspace: Path = WORKSPACE,
@@ -102,13 +104,17 @@ def run_warmup(home: Path = HOME, workspace: Path = WORKSPACE,
         write_json(cache / "status.json", status)
         try:
             for label, command, extra_env in stages(home, workspace, extension, source):
+                status["current_step"] = label
+                write_json(cache / "status.json", status)
                 print(f"[warm-up] {label}", flush=True)
                 started = time.monotonic()
                 runner(command, check=True, cwd=str(source),
                        env={**os.environ, **extra_env}, timeout=TIMEOUT_SECONDS)
                 status["steps"].append({"name": label, "seconds": round(time.monotonic() - started, 2)})
                 write_json(cache / "status.json", status)
-            status.update(state="ready", finished=time.time())
+            status.pop("current_step", None)
+            status.update(state="ready", finished=time.time(),
+                          total_seconds=round(time.time() - status["started"], 2))
             write_json(cache / "complete.json", {"fingerprint": expected, "finished": status["finished"]})
             write_json(cache / "status.json", status)
             return "ready"

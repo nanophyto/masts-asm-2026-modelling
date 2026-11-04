@@ -8,7 +8,7 @@ export face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid
        carbon_flux_mg_per_day, carbon_export_g_per_m2,
        martin_flux, fit_martin_exponent, living_particulate_fraction,
        dissolved_organic_fraction, upper_nitrogen_partition,
-       diagnose_column, write_diagnostics, write_export_profile
+       analyse_column_output, write_diagnostics, write_export_profile
 
 const carbon_to_nitrogen = 106 / 16  # mol C per mol N (fixed Redfield ratio)
 const carbon_molar_mass = 12.011     # mg C per mmol C
@@ -111,7 +111,7 @@ function upper_nitrogen_partition(vertical, Δz, top_face)
               phytoplankton, zooplankton, total, zoo_fraction)
 end
 
-function diagnose_column(filename, model)
+function analyse_column_output(filename, model)
     grid = model.grid
     profiles = (; (name => FieldTimeSeries(filename, string(name)) for name in tracers)...)
     times = collect(profiles.P.times)

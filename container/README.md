@@ -47,6 +47,29 @@ Build successfully before testing an image tag. If a build fails, Docker keeps
 that tag pointing to the previous successful image; the smoke test checks that
 the expected workshop exercises exist and reports stale images early.
 
+### Fast source updates from the tested sysimage
+
+For workshop scripts, plotting helpers, documentation and startup changes, use
+`Dockerfile.refresh`. It inherits a **previously built and tested image** and
+never invokes PackageCompiler. The image keeps the compiled sysimage and pinned
+third-party dependencies. It verifies that Julia and Python dependency files
+match the base image before copying the updated source.
+
+```bash
+sudo docker build --platform linux/amd64 --progress=plain \
+  --build-arg BASE_IMAGE=masts-asm-2026-modelling:pr2 \
+  -f container/Dockerfile.refresh \
+  -t masts-asm-2026-modelling:pr3 .
+sudo ./scripts/test_sysimage.sh masts-asm-2026-modelling:pr3
+```
+
+Use the exact tag of your tested sysimage image as `BASE_IMAGE`. For changes to
+`oceanbiome/Project.toml`, `Manifest.toml` or `abil/requirements.txt`, build
+and test a new dependency/sysimage base using `container/Dockerfile`. A source
+refresh preserves the Google Code OSS entrypoint, both Julia runtimes, the
+sysimage and installed editor VSIX archives from its base.
+
+
 Cloud Workstations uses an immutable container digest: publish a new image and
 update the deployment's `IMAGE=` reference after editing source. Layer reuse
 also avoids uploading unchanged dependency/sysimage layers to Artifact Registry.
@@ -73,7 +96,9 @@ participants this link so the exercises are their initial workspace.
 A new session opens `workshop/README.md` as its starting page.
 
 The initial UI uses a dark theme, the participant workspace and the terminal,
-a workshop README instead of the Welcome page, and a default-position Activity Bar.
+a workshop README instead of the Welcome page, and a hidden Activity Bar.
+The Explorer panel remains accessible with `Ctrl+Shift+E`, Search with
+`Ctrl+Shift+F`, and Extensions with `Ctrl+Shift+X`.
 The secondary sidebar, Source Control and built-in chat/AI UI remain hidden. If Explorer was hidden in a previous
 session, use `Ctrl+B` then `Ctrl+Shift+E` to restore it.
 Google Cloud Code/Gemini and Data Agent integrations
@@ -81,8 +106,12 @@ are removed from the image, including the `googlecloudtools.datacloud`
 Data Agent Kit identifier. Older installations in a participant's persistent
 editor profile are also cleaned up at startup. The Julia and Python language extensions are installed from pinned local
 VSIX files into each participant's persistent editor profile on startup.
-They appear in the Installed extensions list. The Extensions icon is hidden,
-but can be accessed using `Ctrl+Shift+X`.
+They appear in the Installed extensions list. The Extensions view remains available through `Ctrl+Shift+X`.
+The workshop defaults hide the entire Activity Bar, and migrate the `default`
+position saved by earlier workshop images when a persistent home is restarted.
+An intentionally selected `top` or `bottom` position is retained. The workshop removes
+Google Antigravity (`Google.google-antigravity`) alongside other Google AI
+extensions from both the base image and persistent extension folders.
 
 During workstation startup, after Code OSS is launched, the installer checks:
 
@@ -90,8 +119,13 @@ During workstation startup, after Code OSS is launched, the installer checks:
 /opt/code-oss/bin/codeoss-cloudworkstations --list-extensions --show-versions
 ```
 
-It installs `julialang.language-julia@1.250.2` and
-`ms-python.python@2026.4.0` from bundled VSIX files when needed.
+It installs `julialang.language-julia@1.250.2`,
+`ms-python.python@2026.4.0`, and
+`devyas319.csv-interactive-table-viewer@0.1.5` from bundled VSIX files when needed.
+The CSV viewer renders data in an interactive grid with sorting and filtering.
+Right-click a CSV tab and choose **Reopen Editor With → CSV Table Viewer**
+if the file opens as plain text. Its VSIX archive is downloaded after the
+scientific sysimage layer; `Dockerfile.refresh` adds it to an existing image.
 Both extensions should appear in that listing. Optional extension packs are
 skipped so no other extensions need to be downloaded. No internet access is
 required during participant startup. If installation fails, the startup log reports it.
@@ -206,58 +240,61 @@ julia --project=../oceanbiome 01_OceanBioME/00_reference_column.jl
 The script writes figures and diagnostics into `results/oceanbiome/`,
 relative to the participant workspace; click the PNGs in Explorer to view them.
 
-## Early workstation preparation and scientific startup timing (Cycle 1.6)
+## First-login editor and scientific warm-up (PR3)
 
-The Julia extension has its own Julia 1.11 language-server and indexing
-processes. In the 2 November local browser log, the language-server
-precompilation itself took **230 seconds**, followed by symbol-cache downloads.
-This occurs in the participant's persistent editor profile, separately from
-scientific compilation. Launching Cloud Workstations early lets these processes
-finish before the workshop opens.
+`MASTS_WARMUP_ON_START=1` is enabled by default. On each newly provisioned
+workstation, the startup stage installs the bundled editor extensions, then
+launches a **non-blocking, one-time warm-up** in the participant's persistent
+home. Operators can start workstations before the session and check readiness.
 
-### Prepare each participant account when its workstation starts
+Preparation runs sequentially, with a per-user lock:
 
-Set `MASTS_WARMUP_ON_START=1` as a container environment variable in the
-Cloud Workstations configuration (or via `docker run -e`). Google's existing
-container entrypoint executes `210_warmup_workstation.sh` *after* the
-extension-installation stage. The script starts preparation as the `user`
-account in the background and immediately returns control to Code OSS.
-It performs these steps sequentially:
+1. Load the pinned Julia 1.11 language-server environment.
+2. Load the Julia 1.10 VS Code terminal-server environment.
+3. Run a **two-day** LOBSTER column and create one figure with the scientific
+   Julia 1.10 sysimage. Results are written to
+   `~/.cache/masts-workshop/reference-output/`.
 
-1. Run the image's tested annual reference column with Julia 1.10,
-   writing figures and diagnostics into `~/.cache/masts-workshop/reference-output`.
-   The participant's editable files are never executed automatically.
-2. Precompile the Julia 1.11 language-server environment from the installed
-   Julia extension, into the participant's persistent Julia depot.
-3. Precompile the Julia 1.10 VS Code terminal-server environment, when present.
+The participant exercises stay at **365 days** and remain independently
+editable. Only missing workspace files are seeded on subsequent starts;
+existing scripts, participant edits and results are preserved. Fingerprinting
+avoids repeated preparation once an environment is ready; new relevant
+scientific code or dependencies invalidate the completion marker.
 
-It runs once per image/science version. An exclusive file lock prevents
-parallel warm-ups, and the completion marker is written only after all steps
-succeed. Participant exercises, edits and the participant's `workshop/results/` directory are
-preserved. Failed preparation is recorded and retried on the next startup.
-
-For a local Docker rehearsal, with the image built:
-
-```bash
-docker run --privileged --rm -p 127.0.0.1:8080:80 \
-  -e MASTS_WARMUP_ON_START=1 \
-  -v masts-workshop-home:/home/user \
-  masts-asm-2026-modelling:local
-```
-
-Monitor preparation from the workstation terminal:
+In the workstation's terminal, inspect step-by-step progress and recorded
+timings:
 
 ```bash
 python /opt/workshop/warmup_workstation.py status
 tail -f ~/.cache/masts-workshop/warmup.log
 ```
 
-The status becomes `ready` after the annual reference run has produced its output.
-Cloud operators should start all participant workstations early and verify
-`ready` before sharing launch links. Precompilation of the package index and
-symbol downloads may still be performed by the language-server process when
-participants first open the workspace. Running the reference example in a
-separate process also does not preserve all JIT-compiled methods by itself.
+`status.json` reports `running`, `ready` or `failed`, the active step and
+completed-step timings. The `ready` marker is written only after all three
+stages pass; a failed warm-up is retried at the next workstation startup.
+Set `MASTS_WARMUP_ON_START=0` to disable automatic preparation for a specific
+container. The existing extension's symbol indexing can still run when a
+participant opens a Julia project; confirm language-server readiness in the
+browser, in addition to the warm-up status.
+
+For local fresh-home validation, launch the refreshed image with a distinct
+Docker volume and the Google Code OSS entrypoint:
+
+```bash
+sudo docker run --privileged --rm --name masts-workshop-pr3 \
+  -p 127.0.0.1:8081:80 \
+  -v masts-workshop-pr3-home:/home/user \
+  masts-asm-2026-modelling:pr3
+```
+
+Open `http://localhost:8081/?folder=/home/user/masts-asm-2026-modelling/workshop`,
+confirm the README and Explorer are visible, then run a reference exercise
+and inspect the Plot Pane. Test a Julia REPL restart and a second launch
+with the **same** volume. Check per-stage warm-up times against the previous
+cold-start observations: approximately 230–270 s for first-use language-server
+precompilation, 493 s for reference/plots warm-up, and a subsecond
+`VSCodeServer` import in one prior warm-up. These are historical observations,
+not yet measured PR3 improvements.
 
 ### Optional shared science sysimage
 
