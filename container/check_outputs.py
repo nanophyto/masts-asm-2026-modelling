@@ -8,7 +8,7 @@ EXPECTED = {
     "reference": (
         "reference_vertical_evolution.png", "reference_nitrogen_partition.png",
         "reference_living_fraction.png", "reference_carbon_export.png",
-        "reference_martin_curve.png", "reference_physics.png",
+        "reference_martin_curve.png",
         "reference_diagnostics.csv",
     ),
     "sinking": ("sinking_response.png", "sinking_export.png", "control_diagnostics.csv",

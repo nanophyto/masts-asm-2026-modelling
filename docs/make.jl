@@ -86,6 +86,15 @@ for (script, experiment, _) in parameter_exercises
     parameter_outputs[experiment] = (quick || reuse_results) ? nothing : run_exercise(script, joinpath(output_base, experiment))
 end
 
+# The physics diagram belongs to the appendix; the reference exercise
+# concentrates on simulation results and its five scientific figures.
+physics_figure = joinpath(reference_dir, "reference_physics.png")
+if !isfile(physics_figure)
+    mkpath(reference_dir)
+    code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_idealised_physics(ARGS[1]; preview=false)"
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $physics_figure`)
+end
+
 figures = (
     (reference_dir, "reference_vertical_evolution.png"),
     (reference_dir, "reference_nitrogen_partition.png"),

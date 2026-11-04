@@ -87,8 +87,9 @@ It can be reduced by saving profiles more frequently.
 
 The full 365-day grazing run creates both comparison figures. The reference
 column produces `reference_vertical_evolution.png`,
-`reference_carbon_export.png`, `reference_martin_curve.png`, and
-`reference_physics.png`. The export-profile figure compares final 90-day
+`reference_carbon_export.png` and `reference_martin_curve.png`.
+The documentation build creates `reference_physics.png` for the physical-forcing
+appendix. The export-profile figure compares final 90-day
 mean model fluxes to the Martin et al. (1987) power-law reference anchored
 at 100 m, and shows cumulative export over the full simulated year.
 The annual grazing script produces the comparison figures. The test suite

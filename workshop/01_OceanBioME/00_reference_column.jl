@@ -5,15 +5,9 @@
 # and mixing, and examine the evolving tracer structure and particulate
 # carbon export.
 #
-# From the repository root:
-#
-# ```bash
-# julia --project=oceanbiome workshop/01_OceanBioME/00_reference_column.jl
-# ```
-#
 # The simulation runs a full 365-day seasonal cycle.
 
-# ## Load OceanBioME and Oceananigans
+# ## Load OceanBioME, Oceananigans, and the workshop utilities
 
 using OceanBioME, Oceananigans, CairoMakie
 using Oceananigans.Units
@@ -42,17 +36,15 @@ biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
 
 # ## Couple biology to the water column
 #
-# `NonhydrostaticModel` is an Oceananigans constructor. The prescribed
-# vertical diffusivity mixes the seven tracers through the water column.
+# `NonhydrostaticModel` is an Oceananigans physical oceanography constructor. The prescribed
+# closure mixes the seven tracers through the water column.
 
 model = NonhydrostaticModel(grid; closure, biogeochemistry)
 set!(model; initial...)
 
 # ## Run and save the simulation
 #
-# The output includes daily tracer profiles and diagnostics of sinking
-# organic-carbon export at 100 m and 300 m. Both depths coincide with grid
-# faces. Profiles are saved daily throughout the year.
+# The simulation estimates the evolution of the seven tracers over 365 days. 
 
 output_dir = results_directory("reference_column")
 
@@ -64,10 +56,16 @@ simulation.output_writers[:profiles] = JLD2Writer(model, model.tracers;
                                                    overwrite_files = true)
 run!(simulation)
 
+# This output is then analysed to produce a nitrogen budget, vertical tracer evolution, and cumulative
+# organic-carbon export at 100 m and 300 m. Profiles are saved daily throughout the year.
+
 reference_results = analyse_column_output(filename, model)
+
+# And then exported:
 write_diagnostics(joinpath(output_dir, "reference_diagnostics.csv"), reference_results)
 write_export_profile(joinpath(output_dir, "reference_export_profile.csv"), reference_results)
 
+# We can print some key results to the console for quick inspection:
 println("Reference: final surface phytoplankton = ", last(reference_results.surface_P), " mmol N/m³")
 println("Reference: cumulative export at 100 m = ", last(reference_results.export_100.cumulative_g_C), " g C/m²")
 println("Reference: cumulative export at 300 m = ", last(reference_results.export_300.cumulative_g_C), " g C/m²")
@@ -89,9 +87,9 @@ println("Saved $filename and diagnostics CSV")
 # large POM and DOM. Together they show how the initially uniform ecosystem
 # responds to light, mixing and biological processes.
 
-vertical_figure = joinpath(output_dir, "reference_vertical_evolution.png")
-plot_vertical_evolution(reference_results, vertical_figure)
-println("Saved $vertical_figure")
+vertical_figure_path = joinpath(output_dir, "reference_vertical_evolution.png")
+plot_vertical_evolution(reference_results, vertical_figure_path)
+println("Saved $vertical_figure_path")
 
 #md # WORKSHOP_REFERENCE_VERTICAL_FIGURE
 
@@ -104,9 +102,9 @@ println("Saved $vertical_figure")
 # seasonal nitrogen cycling discussed by
 # [Fasham et al. (1990)](https://elischolar.library.yale.edu/journal_of_marine_research/1981/).
 
-partition_figure = joinpath(output_dir, "reference_nitrogen_partition.png")
-plot_nitrogen_partition(reference_results, partition_figure)
-println("Saved $partition_figure")
+partition_figure_path = joinpath(output_dir, "reference_nitrogen_partition.png")
+plot_nitrogen_partition(reference_results, partition_figure_path)
+println("Saved $partition_figure_path")
 
 #md # WORKSHOP_REFERENCE_PARTITION_FIGURE
 
@@ -122,9 +120,9 @@ println("Saved $partition_figure")
 # Their microbial biomass includes organisms not explicitly represented
 # by LOBSTER, so our nitrogen ratio illustrates the model's compartments.
 
-living_figure = joinpath(output_dir, "reference_living_fraction.png")
-plot_living_fraction(reference_results, living_figure)
-println("Saved $living_figure")
+living_figure_path = joinpath(output_dir, "reference_living_fraction.png")
+plot_living_fraction(reference_results, living_figure_path)
+println("Saved $living_figure_path")
 
 #md # WORKSHOP_REFERENCE_LIVING_FIGURE
 
@@ -135,9 +133,9 @@ println("Saved $living_figure")
 # and 300 m. These fluxes include the adjustment of initially prescribed
 # particulate matter, particularly early in the simulation.
 
-export_figure = joinpath(output_dir, "reference_carbon_export.png")
-plot_reference_export(reference_results, export_figure)
-println("Saved $export_figure")
+export_figure_path = joinpath(output_dir, "reference_carbon_export.png")
+plot_reference_export(reference_results, export_figure_path)
+println("Saved $export_figure_path")
 
 #md # WORKSHOP_REFERENCE_EXPORT_FIGURE
 
@@ -152,16 +150,11 @@ println("Saved $export_figure")
 # adjustment. The power-law comparison summarizes attenuation; LOBSTER's
 # biological transformations and particle sinking generate the model profile.
 
-profile_figure = joinpath(output_dir, "reference_martin_curve.png")
-plot_export_profile(reference_results, profile_figure)
-println("Saved $profile_figure")
+profile_figure_path = joinpath(output_dir, "reference_martin_curve.png")
+plot_export_profile(reference_results, profile_figure_path)
+println("Saved $profile_figure_path")
 
 #md # WORKSHOP_REFERENCE_MARTIN_FIGURE
-
-# The physics diagram is shown in the appendix.
-physics_figure = joinpath(output_dir, "reference_physics.png")
-plot_idealised_physics(physics_figure)
-println("Saved $physics_figure")
 
 # ## What to look for
 #
