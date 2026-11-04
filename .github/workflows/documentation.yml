@@ -1,16 +1,23 @@
-name: Documentation
+name: Documentation and Pages
 
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      full_build:
+        description: "Regenerate all annual scientific simulations and figures"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: docs-${{ github.ref }}
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,6 +27,9 @@ jobs:
     env:
       JULIA_NUM_THREADS: "1"
       JULIA_PKG_PRECOMPILE_AUTO: "0"
+      # Fast default publishes all tutorial pages using committed figures.
+      # Manual full_build regenerates the simulations and figures.
+      DOCS_CONTENT_ONLY: ${{ inputs.full_build == true && 'false' || 'true' }}
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
@@ -28,23 +38,13 @@ jobs:
       - uses: julia-actions/cache@v3
         with:
           delete-old-caches: false
-      - name: Check committed manifests
-        run: |
-          test -s oceanbiome/Manifest.toml
-          test -s docs/Manifest.toml
-      - name: Instantiate scientific environment
-        run: julia --startup-file=no --project=oceanbiome -e 'using Pkg; Pkg.instantiate()'
       - name: Instantiate documentation environment
         run: julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
-      - name: Build documentation and validate scientific figures
-        env:
-          # Fast smoke build on PRs; full set of experiments on main / manual runs.
-          DOCS_QUICK: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
-        # docs/make.jl currently deploys automatically on main when
-        # GITHUB_ACTIONS=true. Unset that flag for this build-only CI job;
-        # CI=true remains set for Documenter's pretty URLs.
+      - name: Build documentation
+        # Prevent docs/make.jl from invoking its legacy deploydocs branch;
+        # GitHub Pages deployment is handled below with official actions.
         run: env -u GITHUB_ACTIONS julia --startup-file=no --project=docs docs/make.jl
-      - name: Verify generated workshop pages
+      - name: Verify generated pages and included figures
         shell: bash
         run: |
           set -euo pipefail
@@ -58,10 +58,33 @@ jobs:
             }
           done
           test -s docs/build/assets/reference_carbon_export.png
-      - name: Upload built HTML site
+      - name: Upload documentation artifact
         uses: actions/upload-artifact@v4
         with:
           name: workshop-documentation
           path: docs/build/
           if-no-files-found: error
           retention-days: 14
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - name: Upload website for GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/build/
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish site
+        id: deployment
+        uses: actions/deploy-pages@v4
