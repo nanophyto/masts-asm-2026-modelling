@@ -72,11 +72,21 @@ Then change grazing and compare two columns:
 julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
 ```
 
-Both scripts generate JLD2 tracer profiles, diagnostic CSVs and PNG figures
-under `workshop/results/oceanbiome/`, with separate `reference_column/` and
-`grazing/` directories. The first plot may take longer while CairoMakie loads.
+Choose additional independent investigations:
 
-Both Julia exercises use 50 vertical cells over 500 m, a 30-minute time step,
+```bash
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/02_sinking.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/03_remineralisation.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/04_light_affinity.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/05_nutrient_affinity.jl
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/06_phytoplankton_mortality.jl
+```
+
+All seven scripts generate JLD2 tracer profiles, diagnostic CSVs and PNG figures
+under `workshop/results/oceanbiome/`, in their own experiment directories.
+The first plot may take longer while CairoMakie loads.
+
+The Julia exercises use 50 vertical cells over 500 m, a 30-minute time step,
 vertically implicit mixing and a 365-day seasonal simulation.
 
 ## Run the workshop image with Docker
@@ -104,5 +114,10 @@ the parameter experiments and their validated figures. Use the scripts above to
 reproduce the simulations and generate your own plots.
 
 Continue with the [reference column](generated/00_reference_column.md),
-the [grazing experiment](generated/01_grazing.md), or the
+the [grazing experiment](generated/01_grazing.md),
+[sinking](generated/02_sinking.md),
+[remineralisation](generated/03_remineralisation.md),
+[light affinity](generated/04_light_affinity.md),
+[nutrient affinity](generated/05_nutrient_affinity.md),
+[phytoplankton mortality](generated/06_phytoplankton_mortality.md), or the
 [physical-forcing appendix](generated/physical_forcing.md).

@@ -55,6 +55,12 @@ end
 
 reference_dir = joinpath(output_base, "reference_column")
 grazing_dir = joinpath(output_base, "grazing")
+parameter_exercises = (("02_sinking.jl", "sinking", "slow_sinking"),
+                       ("03_remineralisation.jl", "remineralisation", "fast_remineralisation"),
+                       ("04_light_affinity.jl", "light_affinity", "higher_light_affinity"),
+                       ("05_nutrient_affinity.jl", "nutrient_affinity", "higher_nutrient_affinity"),
+                       ("06_phytoplankton_mortality.jl", "phytoplankton_mortality", "higher_mortality"))
+parameter_outputs = Dict{String, Union{String, Nothing}}()
 # For documentation-only fixes, reuse the previously generated annual
 # profiles, CSV diagnostics, and figures without repeating the simulations.
 reference_output, grazing_output = if reuse_results
@@ -74,6 +80,12 @@ else
      run_exercise("01_grazing.jl", grazing_dir))
 end
 
+# Fast PR documentation checks generate the new pages without re-running
+# another ten annual simulations. Published full builds generate their figures.
+for (script, experiment, _) in parameter_exercises
+    parameter_outputs[experiment] = (quick || reuse_results) ? nothing : run_exercise(script, joinpath(output_base, experiment))
+end
+
 figures = (
     (reference_dir, "reference_vertical_evolution.png"),
     (reference_dir, "reference_nitrogen_partition.png"),
@@ -85,7 +97,9 @@ figures = (
     (grazing_dir, "grazing_plankton_balance.png"),
     (grazing_dir, "carbon_export.png"),
 )
-for (directory, filename) in figures
+parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(kind).png")
+                          for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
+for (directory, filename) in (quick ? figures : (figures..., parameter_figures...))
     check_png(joinpath(directory, filename))
     if !quick
         cp(joinpath(directory, filename), joinpath(assets_dir, filename); force = true)
@@ -94,7 +108,7 @@ end
 
 function write_result_assets(prefix, output, checks)
     quick && return
-    figure_names = last.(figures)
+    figure_names = last.((figures..., parameter_figures...))
     if !isnothing(output)
         log_lines = filter(line -> !any(name -> occursin(name, line), figure_names),
                            split(output, '\n'))
@@ -123,6 +137,14 @@ grazing_checks = [budget_summary(label, joinpath(grazing_dir, "$(name)_diagnosti
                   for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))]
 write_result_assets("reference_column", reference_output, reference_checks)
 write_result_assets("grazing", grazing_output, grazing_checks)
+if !quick
+    for (_, experiment, modified) in parameter_exercises
+        directory = joinpath(output_base, experiment)
+        checks = [budget_summary(label, joinpath(directory, "$(name)_diagnostics.csv"))
+                  for (label, name) in (("Control", "control"), ("Modified", modified))]
+        write_result_assets(experiment, parameter_outputs[experiment], checks)
+    end
+end
 
 reference_note = "Reference results and figures are provided in the published workshop documentation."
 function asset_text(filename)
@@ -160,6 +182,15 @@ make_tutorial("01_grazing.jl", (
     "WORKSHOP_BUDGET_CHECK" => asset_text("grazing_budget.md"),
 ))
 
+for (script, experiment, _) in parameter_exercises
+    make_tutorial(script, (
+        "WORKSHOP_PARAMETER_OUTPUT" => asset_text("$(experiment)_console.md"),
+        "WORKSHOP_PARAMETER_RESPONSE_FIGURE" => figure_block("$(experiment)_response.png", "Annual response to $(replace(experiment, '_' => ' '))"),
+        "WORKSHOP_PARAMETER_EXPORT_FIGURE" => figure_block("$(experiment)_export.png", "Carbon export response to $(replace(experiment, '_' => ' '))"),
+        "WORKSHOP_PARAMETER_BUDGET_CHECK" => asset_text("$(experiment)_budget.md"),
+    ))
+end
+
 # The appendix is a template: Documenter should process only its generated
 # copy, where the relative links to both tutorials are correct.
 physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
@@ -176,7 +207,14 @@ makedocs(
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
         "Reference column" => "generated/00_reference_column.md",
-        "Parameter experiments" => "generated/01_grazing.md",
+        "Parameter experiments" => [
+            "Light affinity" => "generated/04_light_affinity.md",
+            "Nutrient affinity" => "generated/05_nutrient_affinity.md",
+            "Grazing" => "generated/01_grazing.md",
+            "Particle sinking" => "generated/02_sinking.md",
+            "Remineralisation" => "generated/03_remineralisation.md",
+            "Phytoplankton mortality" => "generated/06_phytoplankton_mortality.md",
+        ],
         "Running on your own system" => "running_locally.md",
         "Appendix" => ["Physical forcing" => "generated/physical_forcing.md"],
     ],

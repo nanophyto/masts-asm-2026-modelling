@@ -33,7 +33,9 @@ using CairoMakie
              (MASTSWorkshop.plot_idealised_physics, (), "reference_physics.png"),
              (MASTSWorkshop.plot_grazing_response, (control, reduced), "grazing_response.png"),
              (MASTSWorkshop.plot_plankton_balance, (control, reduced), "grazing_plankton_balance.png"),
-             (MASTSWorkshop.plot_carbon_export, (control, reduced), "carbon_export.png"))
+             (MASTSWorkshop.plot_carbon_export, (control, reduced), "carbon_export.png"),
+             (MASTSWorkshop.plot_parameter_response, (control, reduced), "parameter_response.png"),
+             (MASTSWorkshop.plot_parameter_export, (control, reduced), "parameter_export.png"))
 
     mktempdir() do dir
         for (plot, args, name) in plots

@@ -50,8 +50,18 @@ jobs:
         run: julia --startup-file=no --project=oceanbiome -e 'using Pkg; Pkg.instantiate()'
       - name: Test Julia imports and versions
         run: julia --startup-file=no --project=oceanbiome oceanbiome/test/runtests.jl
-      - name: Run annual grazing exercise and check diagnostics
+      - name: Run annual scientific parameter exercises and check diagnostics
         run: |
           julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/01_grazing.jl
           test -s workshop/results/oceanbiome/grazing/control_diagnostics.csv
           test -s workshop/results/oceanbiome/grazing/reduced_grazing_diagnostics.csv
+          julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/02_sinking.jl
+          julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/03_remineralisation.jl
+          julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/04_light_affinity.jl
+          julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/05_nutrient_affinity.jl
+          julia --startup-file=no --project=oceanbiome workshop/01_OceanBioME/06_phytoplankton_mortality.jl
+          for experiment in sinking remineralisation light_affinity nutrient_affinity phytoplankton_mortality; do
+            test -s "workshop/results/oceanbiome/$experiment/control_diagnostics.csv"
+            test -s "workshop/results/oceanbiome/$experiment/${experiment}_response.png"
+            test -s "workshop/results/oceanbiome/$experiment/${experiment}_export.png"
+          done

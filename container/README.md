@@ -15,8 +15,9 @@ docker build --platform linux/amd64 -f container/Dockerfile \
 ./scripts/test_container.sh masts-asm-2026-modelling:local
 ```
 
-The smoke test runs the Python imports and short Julia reference/grazing
-experiments in the built image. It verifies PNGs and diagnostic CSVs. It runs the reference example twice. Its
+The smoke test runs Python checks and the annual Julia reference, grazing,
+sinking, remineralisation, light affinity, nutrient affinity and mortality experiments in the built image. It verifies
+PNGs and diagnostic CSVs. Its
 output includes `/usr/bin/time -v` elapsed time and peak resident memory for
 the Julia commands; results are written to `outputs/container-smoke/`.
 The first image build downloads and precompiles the complete environments.
@@ -86,6 +87,10 @@ Open the workshop directly using this URL:
 
 `http://localhost:8080/?folder=/home/user/masts-asm-2026-modelling/workshop`
 
+On startup, existing home volumes gain newly added exercise scripts, and the
+instructor-maintained `MASTSWorkshop.jl` and Makie extension are refreshed from
+the image. Existing exercise edits and generated results are preserved.
+
 The `folder` parameter is supported by Google's Code OSS and opens the
 participant-only `workshop/` directory. The developer folders remain available
 inside the repository, and the examples import the package by its installed
@@ -126,7 +131,7 @@ The CSV viewer renders data in an interactive grid with sorting and filtering.
 Right-click a CSV tab and choose **Reopen Editor With → CSV Table Viewer**
 if the file opens as plain text. Its VSIX archive is downloaded after the
 scientific sysimage layer; `Dockerfile.refresh` adds it to an existing image.
-Both extensions should appear in that listing. Optional extension packs are
+All three extensions should appear in that listing. Optional extension packs are
 skipped so no other extensions need to be downloaded. No internet access is
 required during participant startup. If installation fails, the startup log reports it.
 

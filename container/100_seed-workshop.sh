@@ -19,6 +19,24 @@ runuser -u "$username" -- mkdir -p "$workspace"
 runuser -u "$username" -- cp -R --no-clobber --preserve=mode,timestamps \
     /opt/workshop/source/. "$workspace/"
 
+# Keep the instructor-maintained Julia package implementation in sync with
+# the image when reusing a participant home from an earlier workshop version.
+# Exercise scripts are seeded above only when missing, preserving user edits.
+for source_file in oceanbiome/src/MASTSWorkshop.jl \
+                   oceanbiome/ext/MASTSWorkshopMakieExt.jl; do
+    runuser -u "$username" -- cp --preserve=mode,timestamps \
+        "/opt/workshop/source/$source_file" "$workspace/$source_file"
+done
+
+# Retire the original mixing exercise when it is an unedited seeded copy.
+# A participant's modified script remains intact.
+old_mixing="$workspace/workshop/01_OceanBioME/04_mixing.jl"
+old_mixing_sha="84231069aaaa79be8baececd1a72c292a259f1f6b4aa6c80ee9d8be582d7f998"
+if [[ -f "$old_mixing" ]] && \
+   [[ "$(sha256sum "$old_mixing" | cut -d ' ' -f1)" == "$old_mixing_sha" ]]; then
+    runuser -u "$username" -- rm "$old_mixing"
+fi
+
 # Default editor settings, only on the first run.
 for settings_dir in "$workspace/.vscode" "$workspace/workshop/.vscode"; do
     runuser -u "$username" -- mkdir -p "$settings_dir"

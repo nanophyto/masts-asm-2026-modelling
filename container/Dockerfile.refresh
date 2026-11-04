@@ -13,16 +13,21 @@ RUN cmp /tmp/refresh-env/Project.toml /opt/workshop/source/oceanbiome/Project.to
          cmp /tmp/refresh-env/Manifest.toml /opt/workshop/source/oceanbiome/Manifest.toml; \
        fi
 
+# Reuse the pinned CSV extension from the tested base image when available.
+# Download it once if the base predates the editor-cleanup PR.
+ARG CSV_EXTENSION_VERSION=0.1.5
+RUN if ! test -s /opt/workshop/vsix/csv.vsix; then \
+      curl -fL --retry 4 --retry-delay 2 \
+        "https://open-vsx.org/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/devyas319.csv-interactive-table-viewer-${CSV_EXTENSION_VERSION}.vsix" \
+        -o /opt/workshop/vsix/csv.vsix; \
+    fi
+
 COPY . /opt/workshop/source
+# Remove the superseded mixing exercise if the base image contained it.
+RUN rm -f /opt/workshop/source/workshop/01_OceanBioME/04_mixing.jl
 COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
 COPY container/configure_editor.py /opt/workshop/configure_editor.py
-
-# A new editor extension never requires rebuilding the Julia sysimage.
-ARG CSV_EXTENSION_VERSION=0.1.5
-RUN curl -fL --retry 4 --retry-delay 2 \
-      "https://open-vsx.org/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/devyas319.csv-interactive-table-viewer-${CSV_EXTENSION_VERSION}.vsix" \
-      -o /opt/workshop/vsix/csv.vsix \
-    && /opt/workshop/python/bin/python /opt/workshop/ensure_language_extensions.py verify /opt/workshop/vsix \
+RUN /opt/workshop/python/bin/python /opt/workshop/ensure_language_extensions.py verify /opt/workshop/vsix \
     && /opt/workshop/python/bin/python /opt/workshop/configure_editor.py remove-google-ai /opt/code-oss/extensions \
     && /opt/workshop/python/bin/python /opt/workshop/configure_editor.py remove-google-ai /opt/code-oss/resources/app/extensions
 COPY container/100_seed-workshop.sh /etc/workstation-startup.d/100_seed-workshop.sh
@@ -35,4 +40,4 @@ ENV MASTS_WARMUP_ON_START=1
 RUN python -m unittest discover -s container -p 'test_*.py' -q \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
-       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt))'
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_response)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_export))'

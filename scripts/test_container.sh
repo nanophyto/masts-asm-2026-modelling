@@ -22,7 +22,12 @@ docker run --rm \
         cd /opt/workshop/source
         # Catch stale image tags immediately (e.g. after a failed docker build).
         for example in workshop/01_OceanBioME/00_reference_column.jl \
-                       workshop/01_OceanBioME/01_grazing.jl; do
+                       workshop/01_OceanBioME/01_grazing.jl \
+                       workshop/01_OceanBioME/02_sinking.jl \
+                       workshop/01_OceanBioME/03_remineralisation.jl \
+                       workshop/01_OceanBioME/04_light_affinity.jl \
+                       workshop/01_OceanBioME/05_nutrient_affinity.jl \
+                       workshop/01_OceanBioME/06_phytoplankton_mortality.jl; do
             if [[ ! -f "$example" ]]; then
                 echo "ERROR: $example is absent from this image. A previous Docker build may have failed; rebuild successfully before running the smoke test." >&2
                 exit 1
@@ -45,6 +50,21 @@ docker run --rm \
         MASTS_OUTPUT_DIR=/results/grazing /usr/bin/time -v \
           julia --threads=1 --startup-file=no --project=oceanbiome \
           workshop/01_OceanBioME/01_grazing.jl
+        echo "Sinking parameter experiment:"
+        MASTS_OUTPUT_DIR=/results/sinking julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/02_sinking.jl
+        echo "Remineralisation parameter experiment:"
+        MASTS_OUTPUT_DIR=/results/remineralisation julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/03_remineralisation.jl
+        echo "Light-affinity parameter experiment:"
+        MASTS_OUTPUT_DIR=/results/light_affinity julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/04_light_affinity.jl
+        echo "Nutrient-affinity parameter experiment:"
+        MASTS_OUTPUT_DIR=/results/nutrient_affinity julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/05_nutrient_affinity.jl
+        echo "Phytoplankton mortality parameter experiment:"
+        MASTS_OUTPUT_DIR=/results/phytoplankton_mortality julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/06_phytoplankton_mortality.jl
         python container/check_outputs.py /results
     '
 
