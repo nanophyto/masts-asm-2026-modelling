@@ -1,9 +1,12 @@
 name: Documentation and Pages
 
+# Test proposed changes on PRs, and run on main only after merge.
+# This avoids duplicate runs from a feature-branch push with an open PR.
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
     inputs:
       full_build:
