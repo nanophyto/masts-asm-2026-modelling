@@ -10,3 +10,8 @@ __pycache__/
 .DS_Store
 docs/build/
 docs/src/generated/
+
+# Generated Abil BATS example outputs and downloaded upstream inputs
+workshop/02_Abil/BATS_*.png
+workshop/02_Abil/ModelOutput/
+workshop/02_Abil/data/*.csv

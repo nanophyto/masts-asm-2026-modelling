@@ -22,6 +22,18 @@ RUN if ! test -s /opt/workshop/vsix/csv.vsix; then \
         -o /opt/workshop/vsix/csv.vsix; \
     fi
 
+# The upstream BATS regressor additionally uses Matplotlib and Seaborn.
+# Keep these layers separate from Julia/PackageCompiler and changing exercises.
+COPY abil/requirements-bats.txt /tmp/requirements-bats.txt
+RUN /opt/workshop/python/bin/python -m pip install --no-cache-dir -r /tmp/requirements-bats.txt \
+    && /opt/workshop/python/bin/python -c 'import matplotlib, seaborn; from abil.tune import ModelTuner; from abil.predict import ModelPredictor; from abil.post import AbilPostProcessor'
+
+# Include pinned upstream BATS CSVs in the image so participants work offline.
+COPY abil/fetch_bats_data.py /tmp/fetch_bats_data.py
+RUN /opt/workshop/python/bin/python /tmp/fetch_bats_data.py \
+      --dest /opt/workshop/source/workshop/02_Abil/data
+ENV MPLBACKEND=Agg
+
 COPY . /opt/workshop/source
 # Remove the superseded mixing exercise if the base image contained it.
 RUN rm -f /opt/workshop/source/workshop/01_OceanBioME/04_mixing.jl
@@ -37,7 +49,8 @@ COPY container/workspace-settings.json /opt/workshop/workspace-settings.json
 COPY container/machine-settings.json /opt/workshop/machine-settings.json
 ENV MASTS_WARMUP_ON_START=1
 
-RUN python -m unittest discover -s container -p 'test_*.py' -q \
+RUN /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_*.py' -q \
+    && python -m unittest discover -s container -p 'test_*.py' -q \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
        -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_response)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_export))'

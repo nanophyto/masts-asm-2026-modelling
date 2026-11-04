@@ -165,6 +165,18 @@ RUN set -eu; \
 # Source-only edits begin here: Docker reuses the Julia/Python dependency and
 # sysimage layers above. Compiling MASTSWorkshop itself is intentionally late
 # so new helper/plot code is loaded from the actual participant checkout.
+# The upstream BATS regressor additionally uses Matplotlib and Seaborn.
+# Keep these layers separate from Julia/PackageCompiler and changing exercises.
+COPY abil/requirements-bats.txt /tmp/requirements-bats.txt
+RUN /opt/workshop/python/bin/python -m pip install --no-cache-dir -r /tmp/requirements-bats.txt \
+    && /opt/workshop/python/bin/python -c 'import matplotlib, seaborn; from abil.tune import ModelTuner; from abil.predict import ModelPredictor; from abil.post import AbilPostProcessor'
+
+# Include pinned upstream BATS CSVs in the image so participants work offline.
+COPY abil/fetch_bats_data.py /tmp/fetch_bats_data.py
+RUN /opt/workshop/python/bin/python /tmp/fetch_bats_data.py \
+      --dest /opt/workshop/source/workshop/02_Abil/data
+ENV MPLBACKEND=Agg
+
 COPY . /opt/workshop/source
 
 # Small editor-only addon: download after PackageCompiler so it never
