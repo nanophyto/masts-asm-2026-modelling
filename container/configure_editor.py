@@ -64,7 +64,7 @@ def migrate_workshop_julia_executable(settings_path: Path) -> None:
 
 
 def remove_google_ai_extensions(extensions_dir: Path) -> list[str]:
-    """Remove bundled Google Cloud Code/Gemini integrations, preserving other extensions."""
+    """Remove Google coding assistants, preserving unrelated editor extensions."""
     removed = []
     if not extensions_dir.exists():
         return removed
@@ -79,7 +79,7 @@ def remove_google_ai_extensions(extensions_dir: Path) -> list[str]:
         # Google builds also use dataagent* identifiers.
         name = str(info.get("name", "")).casefold().replace("-", "").replace("_", "")
         if publisher.startswith("google") and any(
-            component in name for component in ("cloudcode", "gemini", "dataagent", "datacloud")
+            component in name for component in ("cloudcode", "gemini", "dataagent", "datacloud", "antigravity")
         ):
             if extension.is_symlink():
                 extension.unlink()

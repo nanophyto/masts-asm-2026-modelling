@@ -14,6 +14,17 @@ RUN cmp /tmp/refresh-env/Project.toml /opt/workshop/source/oceanbiome/Project.to
        fi
 
 COPY . /opt/workshop/source
+COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
+COPY container/configure_editor.py /opt/workshop/configure_editor.py
+
+# A new editor extension never requires rebuilding the Julia sysimage.
+ARG CSV_EXTENSION_VERSION=0.1.5
+RUN curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/devyas319.csv-interactive-table-viewer-${CSV_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/csv.vsix \
+    && /opt/workshop/python/bin/python /opt/workshop/ensure_language_extensions.py verify /opt/workshop/vsix \
+    && /opt/workshop/python/bin/python /opt/workshop/configure_editor.py remove-google-ai /opt/code-oss/extensions \
+    && /opt/workshop/python/bin/python /opt/workshop/configure_editor.py remove-google-ai /opt/code-oss/resources/app/extensions
 COPY container/100_seed-workshop.sh /etc/workstation-startup.d/100_seed-workshop.sh
 COPY container/210_warmup_workstation.sh /etc/workstation-startup.d/210_warmup_workstation.sh
 COPY container/warmup_workstation.py /opt/workshop/warmup_workstation.py

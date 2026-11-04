@@ -104,8 +104,12 @@ are removed from the image, including the `googlecloudtools.datacloud`
 Data Agent Kit identifier. Older installations in a participant's persistent
 editor profile are also cleaned up at startup. The Julia and Python language extensions are installed from pinned local
 VSIX files into each participant's persistent editor profile on startup.
-They appear in the Installed extensions list. The Extensions icon is hidden,
-but can be accessed using `Ctrl+Shift+X`.
+They appear in the Installed extensions list. The Extensions view remains available through `Ctrl+Shift+X`. On each user
+profile, right-click the Activity Bar to untick **Testing** and **Extensions**
+if shown; VS Code remembers this preference in that profile. Explorer and Search
+remain visible, so students can navigate the materials. The workshop removes
+Google Antigravity (`Google.google-antigravity`) alongside other Google AI
+extensions from both the base image and persistent extension folders.
 
 During workstation startup, after Code OSS is launched, the installer checks:
 
@@ -113,8 +117,13 @@ During workstation startup, after Code OSS is launched, the installer checks:
 /opt/code-oss/bin/codeoss-cloudworkstations --list-extensions --show-versions
 ```
 
-It installs `julialang.language-julia@1.250.2` and
-`ms-python.python@2026.4.0` from bundled VSIX files when needed.
+It installs `julialang.language-julia@1.250.2`,
+`ms-python.python@2026.4.0`, and
+`devyas319.csv-interactive-table-viewer@0.1.5` from bundled VSIX files when needed.
+The CSV viewer renders data in an interactive grid with sorting and filtering.
+Right-click a CSV tab and choose **Reopen Editor With → CSV Table Viewer**
+if the file opens as plain text. Its VSIX archive is downloaded after the
+scientific sysimage layer; `Dockerfile.refresh` adds it to an existing image.
 Both extensions should appear in that listing. Optional extension packs are
 skipped so no other extensions need to be downloaded. No internet access is
 required during participant startup. If installation fails, the startup log reports it.

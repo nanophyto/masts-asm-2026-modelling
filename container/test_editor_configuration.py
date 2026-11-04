@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 from configure_editor import merge_defaults, migrate_workshop_julia_executable, remove_google_ai_extensions
-from ensure_language_extensions import EXTENSIONS, ensure_extensions, verify_vsix_files
+from ensure_language_extensions import EXTENSIONS, LANGUAGE_EXTENSIONS, ensure_extensions, verify_vsix_files
 
 
 class EditorConfigurationTests(unittest.TestCase):
@@ -149,6 +149,7 @@ class EditorConfigurationTests(unittest.TestCase):
             ("cloudcode", "GoogleCloudTools", "cloudcode"),
             ("gemini", "Google", "geminicodeassist"),
             ("dataagent", "GoogleCloudTools", "dataagentkit"),
+            ("antigravity", "Google", "google-antigravity"),
             ("datacloud", "googlecloudtools", "datacloud"),
             ("hyphenated", "GoogleCloudTools", "data-agent-kit"),
             ("julia", "julialang", "language-julia"),
@@ -160,12 +161,12 @@ class EditorConfigurationTests(unittest.TestCase):
                 "publisher": publisher, "name": name,
             }))
         removed = remove_google_ai_extensions(base)
-        self.assertEqual(len(removed), 5)
+        self.assertEqual(len(removed), 6)
         self.assertEqual(sorted(path.name for path in base.iterdir()), ["julia", "workstations"])
         self.assertEqual(remove_google_ai_extensions(base), [])
 
 
-class LanguageExtensionTests(unittest.TestCase):
+class WorkshopExtensionTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -188,6 +189,23 @@ class LanguageExtensionTests(unittest.TestCase):
             dockerfile,
         )
 
+    def test_csv_extension_is_pinned_after_sysimage_in_both_builds(self):
+        folder = Path(__file__).parent
+        extension = "devyas319.csv-interactive-table-viewer"
+        self.assertEqual(EXTENSIONS[extension], ("csv.vsix", "0.1.5"))
+        for name in ("Dockerfile", "Dockerfile.refresh"):
+            dockerfile = (folder / name).read_text()
+            self.assertIn("ARG CSV_EXTENSION_VERSION=0.1.5", dockerfile)
+            self.assertIn("/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/", dockerfile)
+            self.assertIn("/opt/workshop/vsix/csv.vsix", dockerfile)
+            self.assertLess(dockerfile.index("COPY . /opt/workshop/source"),
+                            dockerfile.index("ARG CSV_EXTENSION_VERSION=0.1.5"))
+        self.assertLess((folder / "Dockerfile").read_text().index("MASTS_MEMORY_PHASE=create-sysimage"),
+                        (folder / "Dockerfile").read_text().index("ARG CSV_EXTENSION_VERSION=0.1.5"))
+        self.assertIn("verify-language", (folder / "Dockerfile").read_text())
+        self.assertIn("COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py",
+                      (folder / "Dockerfile.refresh").read_text())
+
     def test_language_server_runtime_is_independent_of_science_julia(self):
         dockerfile = Path(__file__).with_name("Dockerfile").read_text()
         machine = json.loads(Path(__file__).with_name("machine-settings.json").read_text())
@@ -200,7 +218,7 @@ class LanguageExtensionTests(unittest.TestCase):
         self.assertEqual(workspace["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
         self.assertEqual(machine["julia.languageServerExecutablePath"], "/opt/julia-ls/bin/julia")
 
-    def test_pinned_archives_identify_both_languages(self):
+    def test_pinned_archives_identify_workshop_extensions(self):
         verify_vsix_files(self.vsix_dir)
         with ZipFile(self.vsix_dir / "python.vsix", "w") as archive:
             archive.writestr("extension/package.json", json.dumps({
@@ -212,25 +230,26 @@ class LanguageExtensionTests(unittest.TestCase):
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_installs_missing_extensions_and_checks_registration(self, listed, run):
-        listed.side_effect = ["", "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\n"]
+        listed.side_effect = ["", "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n"]
         ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
-        self.assertEqual(run.call_count, 2)
+        self.assertEqual(run.call_count, 3)
         self.assertEqual(run.call_args_list, [
             call(["/editor/codeoss", "--install-extension", str(self.vsix_dir / "julia.vsix"), "--force", "--do-not-include-pack-dependencies"], check=True),
             call(["/editor/codeoss", "--install-extension", str(self.vsix_dir / "python.vsix"), "--force", "--do-not-include-pack-dependencies"], check=True),
+            call(["/editor/codeoss", "--install-extension", str(self.vsix_dir / "csv.vsix"), "--force", "--do-not-include-pack-dependencies"], check=True),
         ])
 
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_existing_matching_versions_are_idempotent(self, listed, run):
-        listed.return_value = "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\n"
+        listed.return_value = "julialang.language-julia@1.250.2\nms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n"
         ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
         run.assert_not_called()
 
     @patch("ensure_language_extensions.subprocess.run")
     @patch("ensure_language_extensions.subprocess.check_output")
     def test_fails_if_editor_does_not_register_language_extension(self, listed, run):
-        listed.side_effect = ["ms-python.python@2026.4.0\n", "ms-python.python@2026.4.0\n"]
+        listed.side_effect = ["ms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n", "ms-python.python@2026.4.0\ndevyas319.csv-interactive-table-viewer@0.1.5\n"]
         with self.assertRaisesRegex(RuntimeError, "julialang.language-julia"):
             ensure_extensions(Path("/editor/codeoss"), self.vsix_dir)
         self.assertEqual(run.call_count, 1)
