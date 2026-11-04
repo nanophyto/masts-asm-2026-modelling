@@ -1,7 +1,7 @@
 # # Experiment: What happens when phytoplankton mortality increases?
 #
 # Phytoplankton cells are removed by grazing mortality, and sinking.
-# Mortality includes unresolved grazing, and sensensence but primarily represents viral lysis. 
+# Mortality includes unresolved grazing, and senescence but primarily represents viral lysis. 
 # Here, we explore the impact of increasing phytoplankton mortality on stock and particulate carbon export.
 #
 # Both simulations run a full 365-day seasonal cycle.
