@@ -26,20 +26,19 @@ output_dir = results_directory("sinking")
 # ## Choose the biological experiment
 #
 # `DissolvedParticulate` is the detritus component inside LOBSTER.
-# The default speeds are (3, 200) m/day for small and large particles.
+# The default speeds are (3, 200) m/day for small and large particles
+# ([LOBSTER defaults](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)).
 # In the second run, large particles sink at 100 m/day; small particles
 # retain their reference speed. The default particulate decay rates remain.
 #
 # ## Control experiment: reference biology
 
-# `PhytoZoo` sets phytoplankton and zooplankton processes. `LOBSTER`
-# combines these with nutrients and dissolved/particulate organic matter.
-# `NonhydrostaticModel` couples all seven tracers to the physical column,
-# where the prescribed closure mixes them vertically.
+# `LOBSTER` constructs the default `PhytoZoo` plankton, nutrient and detritus
+# components; [LOBSTER's parameters](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)
+# provide the reference values. `NonhydrostaticModel` couples all seven
+# tracers to the physical column, where the closure mixes them vertically.
 
-control_plankton = PhytoZoo()
-control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
     
@@ -73,10 +72,8 @@ println("Saved $(control_file) and CSV summaries")
 # Detritus sinking is controlled by the `DissolvedParticulate` component. 
 slow_detritus = DissolvedParticulate(grid; sinking_speeds = (3/day, 100/day))
 
-# The rest of the model is unchanged, so we can reuse the same plankton and physics:
-modified_plankton = PhytoZoo()
-modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                  detritus = slow_detritus, surface_PAR)
+# All other biology and physical forcing use the reference settings.
+modified_biogeochemistry = LOBSTER(grid; detritus = slow_detritus, surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 
@@ -139,6 +136,3 @@ println("Saved $export_figure_path")
 # and cumulative fluxes, and the upper-100 m detrital inventory. How might
 # sinking and remineralisation interact below the surface?
 #
-# The seven-tracer nitrogen budget should close against sinking loss
-# through the open bottom boundary (up to numerical/sampling error).
-#md # WORKSHOP_PARAMETER_BUDGET_CHECK

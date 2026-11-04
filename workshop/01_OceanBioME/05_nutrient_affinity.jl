@@ -34,16 +34,15 @@ output_dir = results_directory("nutrient_affinity")
 
 # ## Control experiment: reference biology
 #
-# Use the reference nitrate half-saturation concentration of 0.7 mmol N/m³.
+# The default nitrate half-saturation is 0.7 mmol N/m³; the ammonium
+# half-saturation is 0.001 mmol N/m³ ([LOBSTER defaults](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)).
 
-# `PhytoZoo` sets phytoplankton and zooplankton processes. `LOBSTER`
-# combines these with nutrients and dissolved/particulate organic matter.
-# `NonhydrostaticModel` couples all seven tracers to the physical column,
-# where the prescribed closure mixes them vertically.
+# `LOBSTER` constructs the default `PhytoZoo` plankton, nutrient and detritus
+# components; [LOBSTER's parameters](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)
+# provide the reference values. `NonhydrostaticModel` couples all seven
+# tracers to the physical column, where the closure mixes them vertically.
 
-control_plankton = PhytoZoo()
-control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -140,5 +139,3 @@ println("Saved $export_figure_path")
 # concentration and phytoplankton bloom. Does the model use more nitrate during
 # low-nutrient conditions? How does the response propagate to carbon export?
 #
-# The nitrogen budget also tracks loss through the open bottom boundary.
-#md # WORKSHOP_PARAMETER_BUDGET_CHECK

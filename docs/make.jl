@@ -26,7 +26,7 @@ function run_exercise(name, output_dir)
     return strip(replace(output, root * "/" => ""))
 end
 
-function budget_summary(label, filename)
+function check_budget(label, filename)
     lines = readlines(filename)
     length(lines) >= 3 || error("Expected multiple diagnostic samples in $filename")
     columns = split(first(lines), ',')
@@ -39,10 +39,8 @@ function budget_summary(label, filename)
     initial_inventory = first(inventory)
     initial_inventory > 0 || error("Non-positive nitrogen inventory in $filename")
     max_percent = 100 * maximum(abs, residual) / initial_inventory
-    final_percent = 100 * last(residual) / initial_inventory
 
     max_percent <= 5 || error("$label nitrogen-budget residual exceeds 5%: $(round(max_percent; digits=2))%")
-    return "| $label | $(round(final_percent; digits=2))% | $(round(max_percent; digits=2))% |"
 end
 
 function check_png(filename)
@@ -115,7 +113,7 @@ for (directory, filename) in (quick ? figures : (figures..., parameter_figures..
     end
 end
 
-function write_result_assets(prefix, output, checks)
+function write_result_assets(prefix, output)
     quick && return
     figure_names = last.((figures..., parameter_figures...))
     if !isnothing(output)
@@ -125,33 +123,22 @@ function write_result_assets(prefix, output, checks)
               "**365-day simulation — console output**\n\n````text\n" *
               join(log_lines, "\n") * "\n````\n")
     end
-    write(joinpath(assets_dir, "$(prefix)_budget.md"), """
-        ### Nitrogen-budget check
-
-        The budget compares the seven-tracer nitrogen inventory with sinking
-        loss through the open bottom boundary. The residual is relative to
-        the first saved inventory.
-
-        | Experiment | Final residual | Maximum absolute residual |
-        |:-----------|---------------:|--------------------------:|
-        $(join(checks, "\n"))
-
-        The acceptance threshold is 5% of the starting inventory. The
-        diagnostic uses saved profiles and an upwind estimate of sinking flux.
-        """)
 end
 
-reference_checks = [budget_summary("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))]
-grazing_checks = [budget_summary(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
-                  for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))]
-write_result_assets("reference_column", reference_output, reference_checks)
-write_result_assets("grazing", grazing_output, grazing_checks)
+# Preserve scientific budget validation as a build-time check.
+check_budget("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))
+for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))
+    check_budget(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
+end
+write_result_assets("reference_column", reference_output)
+write_result_assets("grazing", grazing_output)
 if !quick
     for (_, experiment, modified) in parameter_exercises
         directory = joinpath(output_base, experiment)
-        checks = [budget_summary(label, joinpath(directory, "$(name)_diagnostics.csv"))
-                  for (label, name) in (("Control", "control"), ("Modified", modified))]
-        write_result_assets(experiment, parameter_outputs[experiment], checks)
+        for (label, name) in (("Control", "control"), ("Modified", modified))
+            check_budget(label, joinpath(directory, "$(name)_diagnostics.csv"))
+        end
+        write_result_assets(experiment, parameter_outputs[experiment])
     end
 end
 
@@ -180,7 +167,6 @@ make_tutorial("00_reference_column.jl", (
     "WORKSHOP_REFERENCE_LIVING_FIGURE" => figure_block("reference_living_fraction.png", "Living particulate and dissolved-organic nitrogen fractions"),
     "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
     "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–500 m and Martin-curve comparison"),
-    "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
 ))
 
 make_tutorial("01_grazing.jl", (
@@ -188,7 +174,6 @@ make_tutorial("01_grazing.jl", (
     "WORKSHOP_GRAZING_FIGURE" => figure_block("grazing_response.png", "Response to reduced grazing"),
     "WORKSHOP_PLANKTON_BALANCE_FIGURE" => figure_block("grazing_plankton_balance.png", "Phytoplankton and zooplankton inventories and grazing response"),
     "WORKSHOP_EXPORT_FIGURE" => figure_block("carbon_export.png", "Control and reduced-grazing carbon export"),
-    "WORKSHOP_BUDGET_CHECK" => asset_text("grazing_budget.md"),
 ))
 
 for (script, experiment, _) in parameter_exercises
@@ -196,7 +181,6 @@ for (script, experiment, _) in parameter_exercises
         "WORKSHOP_PARAMETER_OUTPUT" => asset_text("$(experiment)_console.md"),
         "WORKSHOP_PARAMETER_RESPONSE_FIGURE" => figure_block("$(experiment)_response.png", "Annual response to $(replace(experiment, '_' => ' '))"),
         "WORKSHOP_PARAMETER_EXPORT_FIGURE" => figure_block("$(experiment)_export.png", "Carbon export response to $(replace(experiment, '_' => ' '))"),
-        "WORKSHOP_PARAMETER_BUDGET_CHECK" => asset_text("$(experiment)_budget.md"),
     ))
 end
 

@@ -25,21 +25,20 @@ output_dir = results_directory("remineralisation")
 
 # ## Choose the biological experiment
 #
-# The default decay rate for each particulate pool is 5.88e-7 s^-1
-# (about 0.051/day). Increase both rates to 0.10/day in the second run.
+# The default decay rate for each particulate pool is 5.88e-7 s⁻¹
+# (about 0.051/day; [LOBSTER defaults](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)).
+# Increase both rates to 0.10/day in the second run.
 # Released particulate nitrogen enters DOM and ultimately inorganic
 # nutrients through the LOBSTER recycling processes.
 #
 # ## Control experiment: reference biology
 
-# `PhytoZoo` sets phytoplankton and zooplankton processes. `LOBSTER`
-# combines these with nutrients and dissolved/particulate organic matter.
-# `NonhydrostaticModel` couples all seven tracers to the physical column,
-# where the prescribed closure mixes them vertically.
+# `LOBSTER` constructs the default `PhytoZoo` plankton, nutrient and detritus
+# components; [LOBSTER's parameters](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)
+# provide the reference values. `NonhydrostaticModel` couples all seven
+# tracers to the physical column, where the closure mixes them vertically.
 
-control_plankton = PhytoZoo()
-control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -72,9 +71,7 @@ println("Saved $(control_file) and CSV summaries")
 
 fast_detritus = DissolvedParticulate(grid;
     particulate_remineralisation_rate = (0.10/day, 0.10/day))
-modified_plankton = PhytoZoo()
-modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                  detritus = fast_detritus, surface_PAR)
+modified_biogeochemistry = LOBSTER(grid; detritus = fast_detritus, surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 
@@ -137,6 +134,3 @@ println("Saved $export_figure_path")
 # seasonal plankton response and the upper-100 m detrital inventory.
 # Why might the first few days reflect prescribed initial particles?
 #
-# The seven-tracer nitrogen budget should close against sinking loss
-# through the open bottom boundary (up to numerical/sampling error).
-#md # WORKSHOP_PARAMETER_BUDGET_CHECK

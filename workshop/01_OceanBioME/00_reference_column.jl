@@ -25,12 +25,11 @@ grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
 
 # ## Construct the biological model
 #
-# `PhytoZoo` defines phytoplankton and zooplankton processes. The seven-tracer
-# `LOBSTER` model then combines them with nutrients and dissolved/particulate
-# organic matter. The parameters are set to the default LOBSTER values.
+# `LOBSTER` combines its default `PhytoZoo` plankton with nitrate, ammonium,
+# and dissolved/particulate organic matter. The default maximum grazing rate
+# is about 0.8/day. See the [LOBSTER model documentation](https://oceanbiome.github.io/OceanBioME.jl/stable/model_components/biogeochemical/LOBSTER/).
 
-plankton = PhytoZoo()
-biogeochemistry = LOBSTER(grid; plankton, surface_PAR)
+biogeochemistry = LOBSTER(grid; surface_PAR)
 
 # ## Couple biology to the water column
 #
@@ -166,4 +165,3 @@ println("Saved $profile_figure_path")
 # The [physical-forcing appendix](physical_forcing.md) explains the light
 # and mixing environment. Continue with the [grazing experiment](01_grazing.md)
 # to modify one biological parameter and compare otherwise identical columns.
-#md # WORKSHOP_REFERENCE_BUDGET_CHECK

@@ -1,7 +1,7 @@
 # # Experiment: What happens when phytoplankton mortality increases?
 #
 # Phytoplankton cells are removed by grazing mortality, and sinking.
-# Mortality includes unresolved grazing, and senescence but primarily represents viral lysis. 
+# Mortality includes unresolved grazing, and sensensence but primarily represents viral lysis. 
 # Here, we explore the impact of increasing phytoplankton mortality on stock and particulate carbon export.
 #
 # Both simulations run a full 365-day seasonal cycle.
@@ -31,16 +31,15 @@ output_dir = results_directory("phytoplankton_mortality")
 
 # ## Control experiment: reference biology
 #
-# Use the reference density-dependent mortality coefficient 5.8e-7 (m3/mmol N)/s.
+# The default density-dependent mortality coefficient is 5.8e-7
+# (m³/mmol N)/s ([LOBSTER defaults](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)).
 
-# `PhytoZoo` sets phytoplankton and zooplankton processes. `LOBSTER`
-# combines these with nutrients and dissolved/particulate organic matter.
-# `NonhydrostaticModel` couples all seven tracers to the physical column,
-# where the prescribed closure mixes them vertically.
+# `LOBSTER` constructs the default `PhytoZoo` plankton, nutrient and detritus
+# components; [LOBSTER's parameters](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)
+# provide the reference values. `NonhydrostaticModel` couples all seven
+# tracers to the physical column, where the closure mixes them vertically.
 
-control_plankton = PhytoZoo()
-control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -137,5 +136,3 @@ println("Saved $export_figure_path")
 # detritus? Compare phytoplankton, nutrients and carbon export. Can a stronger loss
 # process increase detrital export even when the living biomass decreases?
 #
-# The nitrogen budget also tracks loss through the open bottom boundary.
-#md # WORKSHOP_PARAMETER_BUDGET_CHECK

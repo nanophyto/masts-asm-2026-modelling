@@ -25,16 +25,15 @@ output_dir = results_directory("grazing")
 
 # ## Control experiment: reference grazing
 #
-# Start with the reference grazing rate of 0.8/day.
+# The default maximum grazing rate is 9.26e-6 s⁻¹ (about 0.8/day).
+# See the [LOBSTER model documentation](https://oceanbiome.github.io/OceanBioME.jl/stable/model_components/biogeochemical/LOBSTER/).
 
-# `PhytoZoo` sets phytoplankton and zooplankton processes. `LOBSTER`
-# combines these with nutrients and dissolved/particulate organic matter.
-# `NonhydrostaticModel` couples all seven tracers to the physical column,
-# where the prescribed closure mixes them vertically.
+# `LOBSTER` constructs the default `PhytoZoo` plankton, nutrient and detritus
+# components; [LOBSTER's parameters](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/LOBSTER_parameters/)
+# provide the reference values. `NonhydrostaticModel` couples all seven
+# tracers to the physical column, where the closure mixes them vertically.
 
-control_plankton = PhytoZoo()
-control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -161,8 +160,5 @@ println("Saved $export_figure_path")
 # in surface biomass produce a proportional change in carbon export? How does
 # the cumulative flux differ from the instantaneous flux?
 #
-# The particle fluxes use a fixed molar C:N ratio of 106:16. Each day's
-# export is calculated from the two sinking particulate pools; the nitrogen
-# budget includes all seven LOBSTER tracers. The budget closes against
-# sinking loss through the open bottom boundary.
-#md # WORKSHOP_BUDGET_CHECK
+# The particle fluxes use a fixed molar C:N ratio of 106:16.
+# Daily export comes from the two sinking particulate pools.
