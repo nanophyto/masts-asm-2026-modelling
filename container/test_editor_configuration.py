@@ -25,7 +25,7 @@ class EditorConfigurationTests(unittest.TestCase):
         configured = json.loads(self.settings.read_text())
         self.assertEqual(configured["workbench.colorTheme"], "Default Dark Modern")
         self.assertEqual(configured["workbench.startupEditor"], "readme")
-        self.assertEqual(configured["workbench.activityBar.location"], "default")
+        self.assertEqual(configured["workbench.activityBar.location"], "hidden")
         self.assertTrue(configured["chat.disableAIFeatures"])
         self.assertFalse(configured["git.enabled"])
         self.assertFalse(configured["extensions.autoUpdate"])
@@ -116,6 +116,23 @@ class EditorConfigurationTests(unittest.TestCase):
         initial_bytes = self.settings.read_bytes()
         merge_defaults(self.defaults, self.settings)
         self.assertEqual(self.settings.read_bytes(), initial_bytes)
+
+    def test_migrates_activity_bar_from_previous_workshop_default(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text('{"workbench.activityBar.location":"default","editor.fontSize":18}\n')
+        merge_defaults(self.defaults, self.settings)
+        configured = json.loads(self.settings.read_text())
+        self.assertEqual(configured["workbench.activityBar.location"], "hidden")
+        self.assertEqual(configured["editor.fontSize"], 18)
+        original = self.settings.read_bytes()
+        merge_defaults(self.defaults, self.settings)
+        self.assertEqual(self.settings.read_bytes(), original)
+
+    def test_keeps_participant_activity_bar_choice(self):
+        self.settings.parent.mkdir(parents=True)
+        self.settings.write_text('{"workbench.activityBar.location":"top"}\n')
+        merge_defaults(self.defaults, self.settings)
+        self.assertEqual(json.loads(self.settings.read_text())["workbench.activityBar.location"], "top")
 
     def test_does_not_replace_invalid_persistent_settings(self):
         self.settings.parent.mkdir(parents=True)

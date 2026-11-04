@@ -96,7 +96,9 @@ participants this link so the exercises are their initial workspace.
 A new session opens `workshop/README.md` as its starting page.
 
 The initial UI uses a dark theme, the participant workspace and the terminal,
-a workshop README instead of the Welcome page, and a default-position Activity Bar.
+a workshop README instead of the Welcome page, and a hidden Activity Bar.
+The Explorer panel remains accessible with `Ctrl+Shift+E`, Search with
+`Ctrl+Shift+F`, and Extensions with `Ctrl+Shift+X`.
 The secondary sidebar, Source Control and built-in chat/AI UI remain hidden. If Explorer was hidden in a previous
 session, use `Ctrl+B` then `Ctrl+Shift+E` to restore it.
 Google Cloud Code/Gemini and Data Agent integrations
@@ -104,10 +106,10 @@ are removed from the image, including the `googlecloudtools.datacloud`
 Data Agent Kit identifier. Older installations in a participant's persistent
 editor profile are also cleaned up at startup. The Julia and Python language extensions are installed from pinned local
 VSIX files into each participant's persistent editor profile on startup.
-They appear in the Installed extensions list. The Extensions view remains available through `Ctrl+Shift+X`. On each user
-profile, right-click the Activity Bar to untick **Testing** and **Extensions**
-if shown; VS Code remembers this preference in that profile. Explorer and Search
-remain visible, so students can navigate the materials. The workshop removes
+They appear in the Installed extensions list. The Extensions view remains available through `Ctrl+Shift+X`.
+The workshop defaults hide the entire Activity Bar, and migrate the `default`
+position saved by earlier workshop images when a persistent home is restarted.
+An intentionally selected `top` or `bottom` position is retained. The workshop removes
 Google Antigravity (`Google.google-antigravity`) alongside other Google AI
 extensions from both the base image and persistent extension folders.
 

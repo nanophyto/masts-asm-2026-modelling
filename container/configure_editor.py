@@ -27,6 +27,11 @@ def merge_defaults(defaults_path: Path, settings_path: Path) -> None:
         raise ValueError("Code OSS settings must be JSON objects")
 
     result = {**defaults, **existing}
+    # Prior images explicitly seeded "default"; upgrade that workshop default
+    # while respecting participant-selected "top", "bottom", or "hidden".
+    if (defaults.get("workbench.activityBar.location") == "hidden"
+            and existing.get("workbench.activityBar.location") == "default"):
+        result["workbench.activityBar.location"] = "hidden"
     if result == existing:
         return
 
