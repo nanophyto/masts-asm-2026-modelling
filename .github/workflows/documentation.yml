@@ -7,8 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: docs-${{ github.ref }}
@@ -17,9 +16,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     env:
       JULIA_NUM_THREADS: "1"
-    timeout-minutes: 90
+      JULIA_PKG_PRECOMPILE_AUTO: "0"
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
@@ -28,18 +28,40 @@ jobs:
       - uses: julia-actions/cache@v3
         with:
           delete-old-caches: false
-      - name: Require committed scientific manifest
-        run: test -f oceanbiome/Manifest.toml
+      - name: Check committed manifests
+        run: |
+          test -s oceanbiome/Manifest.toml
+          test -s docs/Manifest.toml
       - name: Instantiate scientific environment
-        env:
-          JULIA_PKG_PRECOMPILE_AUTO: "0"
         run: julia --startup-file=no --project=oceanbiome -e 'using Pkg; Pkg.instantiate()'
       - name: Instantiate documentation environment
-        env:
-          JULIA_PKG_PRECOMPILE_AUTO: "0"
         run: julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
-      - name: Build documentation and validate plotting
+      - name: Build documentation and validate scientific figures
         env:
+          # Fast smoke build on PRs; full set of experiments on main / manual runs.
           DOCS_QUICK: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: julia --startup-file=no --project=docs docs/make.jl
+        # docs/make.jl currently deploys automatically on main when
+        # GITHUB_ACTIONS=true. Unset that flag for this build-only CI job;
+        # CI=true remains set for Documenter's pretty URLs.
+        run: env -u GITHUB_ACTIONS julia --startup-file=no --project=docs docs/make.jl
+      - name: Verify generated workshop pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s docs/build/index.html
+          for page in 00_reference_column 01_grazing 02_sinking 03_remineralisation \
+                      04_light_affinity 05_nutrient_affinity 06_phytoplankton_mortality \
+                      physical_forcing; do
+            test -s "docs/build/generated/${page}/index.html" || {
+              echo "Missing generated documentation page: $page" >&2
+              exit 1
+            }
+          done
+          test -s docs/build/assets/reference_carbon_export.png
+      - name: Upload built HTML site
+        uses: actions/upload-artifact@v4
+        with:
+          name: workshop-documentation
+          path: docs/build/
+          if-no-files-found: error
+          retention-days: 14
