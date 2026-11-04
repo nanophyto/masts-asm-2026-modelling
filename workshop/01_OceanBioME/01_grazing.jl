@@ -32,8 +32,7 @@ output_dir = results_directory("grazing")
 # `NonhydrostaticModel` couples all seven tracers to the physical column,
 # where the prescribed closure mixes them vertically.
 
-control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                             maximum_grazing_rate = 0.8 / day)
+control_plankton = PhytoZoo()
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
                                   surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
@@ -74,8 +73,7 @@ println("Saved $control_file and diagnostics CSV")
 # Repeat the same column with the grazing rate reduced to 0.4/day.
 # All other parameters and initial conditions are identical.
 
-reduced_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                             maximum_grazing_rate = 0.4 / day)
+reduced_plankton = PhytoZoo(; maximum_grazing_rate = 0.4 / day)
 reduced_biogeochemistry = LOBSTER(grid; plankton = reduced_plankton,
                                   surface_PAR)
 reduced_model = NonhydrostaticModel(grid; closure, biogeochemistry = reduced_biogeochemistry)

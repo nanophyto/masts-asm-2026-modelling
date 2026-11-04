@@ -37,8 +37,7 @@ output_dir = results_directory("remineralisation")
 # `NonhydrostaticModel` couples all seven tracers to the physical column,
 # where the prescribed closure mixes them vertically.
 
-control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                          maximum_grazing_rate = 0.8 / day)
+control_plankton = PhytoZoo()
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
                                   surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
@@ -73,8 +72,7 @@ println("Saved $(control_file) and CSV summaries")
 
 fast_detritus = DissolvedParticulate(grid;
     particulate_remineralisation_rate = (0.10/day, 0.10/day))
-modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                          maximum_grazing_rate = 0.8 / day)
+modified_plankton = PhytoZoo()
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
                                   detritus = fast_detritus, surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)

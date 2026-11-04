@@ -41,8 +41,7 @@ output_dir = results_directory("nutrient_affinity")
 # `NonhydrostaticModel` couples all seven tracers to the physical column,
 # where the prescribed closure mixes them vertically.
 
-control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                             maximum_grazing_rate = 0.8 / day)
+control_plankton = PhytoZoo()
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
                                   surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
@@ -78,8 +77,7 @@ println("Control: nitrogen budget residual = ", last(control_results.budget_resi
 # Reduce the nitrate half-saturation concentration from 0.7 to 0.35 mmol N/m³; retain
 # the 0.001 mmol N/m³ ammonia constant.
 
-modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.35, ammonia = 0.001),
-                              maximum_grazing_rate = 0.8 / day)
+modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.35, ammonia = 0.001))
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
                                    surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)

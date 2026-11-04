@@ -38,9 +38,7 @@ output_dir = results_directory("phytoplankton_mortality")
 # `NonhydrostaticModel` couples all seven tracers to the physical column,
 # where the prescribed closure mixes them vertically.
 
-control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                             phytoplankton_mortality_rate = 5.8e-7,
-                             maximum_grazing_rate = 0.8 / day)
+control_plankton = PhytoZoo()
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
                                   surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
@@ -76,9 +74,7 @@ println("Control: nitrogen budget residual = ", last(control_results.budget_resi
 # Double the phytoplankton mortality coefficient to 1.16e-6 (m3/mmol N)/s; keep
 # zooplankton grazing unchanged.
 
-modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                              phytoplankton_mortality_rate = 1.16e-6,
-                              maximum_grazing_rate = 0.8 / day)
+modified_plankton = PhytoZoo(; phytoplankton_mortality_rate = 1.16e-6)
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
                                    surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)

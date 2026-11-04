@@ -41,9 +41,7 @@ output_dir = results_directory("light_affinity")
 # `NonhydrostaticModel` couples all seven tracers to the physical column,
 # where the prescribed closure mixes them vertically.
 
-control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                             light_half_saturation = 33.0,
-                             maximum_grazing_rate = 0.8 / day)
+control_plankton = PhytoZoo()
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
                                   surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
@@ -79,9 +77,7 @@ println("Control: nitrogen budget residual = ", last(control_results.budget_resi
 # Reduce the light half-saturation constant from 33 to 15 W/m2. Seasonal incoming light
 # and attenuation remain identical.
 
-modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                              light_half_saturation = 15.0,
-                              maximum_grazing_rate = 0.8 / day)
+modified_plankton = PhytoZoo(; light_half_saturation = 15.0)
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
                                    surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)

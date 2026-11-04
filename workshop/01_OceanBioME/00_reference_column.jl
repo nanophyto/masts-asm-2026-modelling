@@ -27,11 +27,9 @@ grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
 #
 # `PhytoZoo` defines phytoplankton and zooplankton processes. The seven-tracer
 # `LOBSTER` model then combines them with nutrients and dissolved/particulate
-# organic matter. The grazing rate is our reference value of 0.8 per day.
+# organic matter. The parameters are set to the default LOBSTER values.
 
-plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                     maximum_grazing_rate = 0.8 / day)
-
+plankton = PhytoZoo()
 biogeochemistry = LOBSTER(grid; plankton, surface_PAR)
 
 # ## Couple biology to the water column
