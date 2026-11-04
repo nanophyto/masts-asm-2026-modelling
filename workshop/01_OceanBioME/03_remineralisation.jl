@@ -40,7 +40,7 @@ output_dir = results_directory("remineralisation")
 control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                           maximum_grazing_rate = 0.8 / day)
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR, scale_negatives = true)
+                                  surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -76,7 +76,7 @@ fast_detritus = DissolvedParticulate(grid;
 modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                           maximum_grazing_rate = 0.8 / day)
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                  detritus = fast_detritus, surface_PAR, scale_negatives = true)
+                                  detritus = fast_detritus, surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 

@@ -42,7 +42,7 @@ control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammoni
                              phytoplankton_mortality_rate = 5.8e-7,
                              maximum_grazing_rate = 0.8 / day)
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR, scale_negatives = true)
+                                  surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -80,7 +80,7 @@ modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammon
                               phytoplankton_mortality_rate = 1.16e-6,
                               maximum_grazing_rate = 0.8 / day)
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                   surface_PAR, scale_negatives = true)
+                                   surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 

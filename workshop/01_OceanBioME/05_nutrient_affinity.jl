@@ -44,7 +44,7 @@ output_dir = results_directory("nutrient_affinity")
 control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                              maximum_grazing_rate = 0.8 / day)
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR, scale_negatives = true)
+                                  surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -81,7 +81,7 @@ println("Control: nitrogen budget residual = ", last(control_results.budget_resi
 modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.35, ammonia = 0.001),
                               maximum_grazing_rate = 0.8 / day)
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                   surface_PAR, scale_negatives = true)
+                                   surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 

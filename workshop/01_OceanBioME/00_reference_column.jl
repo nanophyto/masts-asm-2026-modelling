@@ -32,7 +32,7 @@ grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
 plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                      maximum_grazing_rate = 0.8 / day)
 
-biogeochemistry = LOBSTER(grid; plankton, surface_PAR, scale_negatives = true)
+biogeochemistry = LOBSTER(grid; plankton, surface_PAR)
 
 # ## Couple biology to the water column
 #

@@ -1,6 +1,6 @@
 # # Experiment: How does particle sinking affect carbon export?
 #
-# Small and large particulate detritus sink at different speeds. Compare
+# Small and large particulate detritus sink at different speeds. Here we will compare
 # the reference speeds (3 and 200 m/day) with slower large-particle sinking.
 # Only the large-particle sinking speed changes.
 #
@@ -37,13 +37,12 @@ output_dir = results_directory("sinking")
 # `NonhydrostaticModel` couples all seven tracers to the physical column,
 # where the prescribed closure mixes them vertically.
 
-control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                          maximum_grazing_rate = 0.8 / day)
+control_plankton = PhytoZoo()
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR, scale_negatives = true)
+                                  surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
-
+    
 # ## Run and save the control simulation
 #
 # We evolve the seven tracers for 365 days and save daily JLD2 profiles.
@@ -71,11 +70,13 @@ println("Saved $(control_file) and CSV summaries")
 
 # ## Modified experiment: slower sinking
 
+# Detritus sinking is controlled by the `DissolvedParticulate` component. 
 slow_detritus = DissolvedParticulate(grid; sinking_speeds = (3/day, 100/day))
-modified_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
-                          maximum_grazing_rate = 0.8 / day)
+
+# The rest of the model is unchanged, so we can reuse the same plankton and physics:
+modified_plankton = PhytoZoo()
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                  detritus = slow_detritus, surface_PAR, scale_negatives = true)
+                                  detritus = slow_detritus, surface_PAR)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 

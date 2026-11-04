@@ -35,7 +35,7 @@ output_dir = results_directory("grazing")
 control_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                              maximum_grazing_rate = 0.8 / day)
 control_biogeochemistry = LOBSTER(grid; plankton = control_plankton,
-                                  surface_PAR, scale_negatives = true)
+                                  surface_PAR)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -77,7 +77,7 @@ println("Saved $control_file and diagnostics CSV")
 reduced_plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
                              maximum_grazing_rate = 0.4 / day)
 reduced_biogeochemistry = LOBSTER(grid; plankton = reduced_plankton,
-                                  surface_PAR, scale_negatives = true)
+                                  surface_PAR)
 reduced_model = NonhydrostaticModel(grid; closure, biogeochemistry = reduced_biogeochemistry)
 set!(reduced_model; initial...)
 
