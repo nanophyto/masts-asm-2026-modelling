@@ -38,7 +38,7 @@ output_dir = results_directory("sinking")
 # provide the reference values. `NonhydrostaticModel` couples all seven
 # tracers to the physical column, where the closure mixes them vertically.
 
-control_biogeochemistry = LOBSTER(grid; surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR, scale_negatives = true)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
     
@@ -73,7 +73,7 @@ println("Saved $(control_file) and CSV summaries")
 slow_detritus = DissolvedParticulate(grid; sinking_speeds = (3/day, 100/day))
 
 # All other biology and physical forcing use the reference settings.
-modified_biogeochemistry = LOBSTER(grid; detritus = slow_detritus, surface_PAR)
+modified_biogeochemistry = LOBSTER(grid; detritus = slow_detritus, surface_PAR, scale_negatives = true)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 

@@ -29,7 +29,7 @@ grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
 # and dissolved/particulate organic matter. The default maximum grazing rate
 # is about 0.8/day. See the [LOBSTER model documentation](https://oceanbiome.github.io/OceanBioME.jl/stable/model_components/biogeochemical/LOBSTER/).
 
-biogeochemistry = LOBSTER(grid; surface_PAR)
+biogeochemistry = LOBSTER(grid; surface_PAR, scale_negatives = true)
 
 # ## Couple biology to the water column
 #

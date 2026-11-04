@@ -38,7 +38,7 @@ output_dir = results_directory("remineralisation")
 # provide the reference values. `NonhydrostaticModel` couples all seven
 # tracers to the physical column, where the closure mixes them vertically.
 
-control_biogeochemistry = LOBSTER(grid; surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR, scale_negatives = true)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -71,7 +71,7 @@ println("Saved $(control_file) and CSV summaries")
 
 fast_detritus = DissolvedParticulate(grid;
     particulate_remineralisation_rate = (0.10/day, 0.10/day))
-modified_biogeochemistry = LOBSTER(grid; detritus = fast_detritus, surface_PAR)
+modified_biogeochemistry = LOBSTER(grid; detritus = fast_detritus, surface_PAR, scale_negatives = true)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 

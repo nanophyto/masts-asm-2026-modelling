@@ -39,7 +39,7 @@ output_dir = results_directory("phytoplankton_mortality")
 # provide the reference values. `NonhydrostaticModel` couples all seven
 # tracers to the physical column, where the closure mixes them vertically.
 
-control_biogeochemistry = LOBSTER(grid; surface_PAR)
+control_biogeochemistry = LOBSTER(grid; surface_PAR, scale_negatives = true)
 control_model = NonhydrostaticModel(grid; closure, biogeochemistry = control_biogeochemistry)
 set!(control_model; initial...)
 
@@ -75,7 +75,7 @@ println("Control: nitrogen budget residual = ", last(control_results.budget_resi
 
 modified_plankton = PhytoZoo(; phytoplankton_mortality_rate = 1.16e-6)
 modified_biogeochemistry = LOBSTER(grid; plankton = modified_plankton,
-                                   surface_PAR)
+                                   surface_PAR, scale_negatives = true)
 modified_model = NonhydrostaticModel(grid; closure, biogeochemistry = modified_biogeochemistry)
 set!(modified_model; initial...)
 
