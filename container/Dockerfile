@@ -192,6 +192,8 @@ COPY container/workspace-settings.json /opt/workshop/workspace-settings.json
 COPY container/machine-settings.json /opt/workshop/machine-settings.json
 COPY container/configure_editor.py /opt/workshop/configure_editor.py
 COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
+# Warm per-user editor caches during operator-started workstation preparation.
+ENV MASTS_WARMUP_ON_START=1
 RUN chmod +x /etc/workstation-startup.d/100_seed-workshop.sh /etc/workstation-startup.d/120_install_language_extensions.sh /etc/workstation-startup.d/210_warmup_workstation.sh
 
 EXPOSE 80

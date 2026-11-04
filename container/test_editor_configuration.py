@@ -87,6 +87,16 @@ class EditorConfigurationTests(unittest.TestCase):
                           "vertical_diffusivity(x, y, z, t) = vertical_diffusivity(z, t)"):
             self.assertIn(signature, physics)
 
+    def test_source_refresh_inherits_sysimage_without_compilation(self):
+        folder = Path(__file__).parent
+        dockerfile = (folder / "Dockerfile.refresh").read_text()
+        self.assertIn("FROM ${BASE_IMAGE}", dockerfile)
+        self.assertIn("cmp /tmp/refresh-env/Project.toml", dockerfile)
+        self.assertIn("COPY . /opt/workshop/source", dockerfile)
+        self.assertNotIn("create_sysimage(", dockerfile)
+        self.assertIn("ENV MASTS_WARMUP_ON_START=1", dockerfile)
+        self.assertIn("ENV MASTS_WARMUP_ON_START=1", (folder / "Dockerfile").read_text())
+
     def test_participant_start_page_is_in_the_docker_context(self):
         root = Path(__file__).resolve().parent.parent
         self.assertTrue((root / "workshop/README.md").is_file())
