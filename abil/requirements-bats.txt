@@ -1,0 +1,4 @@
+# Extra plotting libraries used by the upstream Abil BATS example.
+# Abil 26.5.4.post2 supplies the other dependencies.
+matplotlib==3.9.4
+seaborn==0.13.2

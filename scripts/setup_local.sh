@@ -19,6 +19,7 @@ command -v "$JULIA_BIN" >/dev/null || { echo "Julia not found: $JULIA_BIN" >&2; 
 "$JULIA_BIN" --threads=1 --startup-file=no -e 'v"1.10" <= VERSION < v"2" || error("Julia 1.10 or later (1.x) is required")'
 
 "$PYTHON_BIN" -m pip install --requirement "$ROOT/abil/requirements.txt"
+"$PYTHON_BIN" -m pip install --requirement "$ROOT/abil/requirements-bats.txt"
 JULIA_PKG_PRECOMPILE_AUTO=0 "$JULIA_BIN" --threads=1 --startup-file=no --project="$ROOT/oceanbiome" -e 'using Pkg; Pkg.instantiate()'
 
 printf '\nDependencies installed. Commit the generated oceanbiome/Manifest.toml to pin the Julia environment.\n'

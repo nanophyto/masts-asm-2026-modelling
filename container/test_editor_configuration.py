@@ -206,7 +206,7 @@ class WorkshopExtensionTests(unittest.TestCase):
             dockerfile,
         )
 
-    def test_csv_extension_is_pinned_after_sysimage_in_both_builds(self):
+    def test_csv_extension_is_pinned_and_cached_in_source_refresh(self):
         folder = Path(__file__).parent
         extension = "devyas319.csv-interactive-table-viewer"
         self.assertEqual(EXTENSIONS[extension], ("csv.vsix", "0.1.5"))
@@ -215,8 +215,12 @@ class WorkshopExtensionTests(unittest.TestCase):
             self.assertIn("ARG CSV_EXTENSION_VERSION=0.1.5", dockerfile)
             self.assertIn("/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/", dockerfile)
             self.assertIn("/opt/workshop/vsix/csv.vsix", dockerfile)
-            self.assertLess(dockerfile.index("COPY . /opt/workshop/source"),
-                            dockerfile.index("ARG CSV_EXTENSION_VERSION=0.1.5"))
+            source = dockerfile.index("COPY . /opt/workshop/source")
+            extension = dockerfile.index("ARG CSV_EXTENSION_VERSION=0.1.5")
+            if name == "Dockerfile.refresh":
+                self.assertLess(extension, source)  # Cached across source-only edits.
+            else:
+                self.assertLess(source, extension)  # Built after the scientific sysimage.
         self.assertLess((folder / "Dockerfile").read_text().index("MASTS_MEMORY_PHASE=create-sysimage"),
                         (folder / "Dockerfile").read_text().index("ARG CSV_EXTENSION_VERSION=0.1.5"))
         self.assertIn("verify-language", (folder / "Dockerfile").read_text())

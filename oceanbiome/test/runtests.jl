@@ -15,6 +15,11 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     @test only(p.version for p in values(Pkg.dependencies()) if p.name == "CairoMakie") == v"0.15.16"
     @test Meta.parseall(read(joinpath(@__DIR__, "..", "ext", "MASTSWorkshopMakieExt.jl"), String)) isa Expr
     @test hasmethod(MASTSWorkshop.analyse_column_output, Tuple{String, Any})
+    for name in ("02_sinking.jl", "03_remineralisation.jl", "04_light_affinity.jl",
+                 "05_nutrient_affinity.jl", "06_phytoplankton_mortality.jl")
+        path = joinpath(@__DIR__, "..", "..", "workshop", "01_OceanBioME", name)
+        @test Meta.parseall(read(path, String)) isa Expr
+    end
 end
 
 include("plot_preview.jl")
@@ -128,4 +133,42 @@ end
                                           [0.0, 0.0], [0.0, 0.0], [0.0, 0.0])
     @test organic[1] == 0.5
     @test isnan(organic[2])
+end
+
+@testset "Biological parameter experiments" begin
+    grid, time_step, initial, closure, light = MASTSWorkshop.column(:BATS)
+    plankton = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
+                         maximum_grazing_rate = 0.8 / day)
+    function make_model(; detritus = DissolvedParticulate(grid), phyto = plankton)
+        bgc = LOBSTER(grid; plankton = phyto, detritus, surface_PAR = light, scale_negatives = true)
+        model = NonhydrostaticModel(grid; closure, biogeochemistry = bgc)
+        set!(model; initial...)
+        return model
+    end
+
+    low_light = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
+                         light_half_saturation = 15.0, maximum_grazing_rate = 0.8 / day)
+    low_nutrients = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.35, ammonia = 0.001),
+                             maximum_grazing_rate = 0.8 / day)
+    mortality = PhytoZoo(; nutrient_half_saturations = (nitrate = 0.7, ammonia = 0.001),
+                         phytoplankton_mortality_rate = 1.16e-6,
+                         maximum_grazing_rate = 0.8 / day)
+    @test low_light.light_half_saturation == 15.0 < plankton.light_half_saturation
+    @test low_nutrients.nutrient_half_saturations.nitrate == 0.35 < plankton.nutrient_half_saturations.nitrate
+    @test mortality.phytoplankton_mortality_rate == 2 * plankton.phytoplankton_mortality_rate
+
+    reference = make_model()
+    slow = make_model(detritus = DissolvedParticulate(grid;
+                           sinking_speeds = (3 / day, 100 / day)))
+    fast = make_model(detritus = DissolvedParticulate(grid;
+                           particulate_remineralisation_rate = (0.10 / day, 0.10 / day)))
+
+    @test sinking_courant(slow, time_step) < sinking_courant(reference, time_step) < 1
+    @test fast.biogeochemistry.underlying_biogeochemistry.detritus.particulate_remineralisation_rate == (0.10 / day, 0.10 / day)
+
+    for model in (reference, slow, fast, make_model(phyto = low_light),
+                  make_model(phyto = low_nutrients), make_model(phyto = mortality))
+        run!(Simulation(model; Δt = time_step, stop_time = 2days))
+        @test all(tracer -> all(isfinite, interior(tracer)), values(model.tracers))
+    end
 end

@@ -2,27 +2,35 @@
 
 ## On a workshop Cloud Workstation
 
-Open the individual launch link provided by your instructor and sign in with
-**your assigned `nanophyto.org` account**. The link opens the participant
-`workshop/` folder directly, with a short README, the OceanBioME exercises,
-Abil.py material and a `results/` folder.
+Open your personal workshop link and sign in with your assigned `nanophyto.org`
+account. The link opens the participant `workshop/` directory containing the
+OceanBioME examples, Python material, and a `results/` folder.
 
-In the File Explorer, open **`01_OceanBioME/00_reference_column.jl`** and choose
-**Julia: Execute File in REPL** from the Command Palette (`Ctrl+Shift+P`).
-The first REPL launch may compile its editor integration; keep it open as you
-move between exercises. Run **`01_OceanBioME/01_grazing.jl`** next to explore
-biological responses. Saved PNGs appear in `results/oceanbiome/` and open
-with a click in Explorer. Use `Ctrl+B` and `Ctrl+Shift+E` to restore the Explorer
-if it was hidden in a previous session.
+Open **`01_OceanBioME/00_reference_column.jl`** and use **Julia: Execute File
+in REPL** from the Command Palette (`Ctrl+Shift+P`). Reuse the same REPL to
+run another example. Julia Plot Pane history keeps the displayed figures.
+Saved PNGs and CSVs are in `results/oceanbiome/`. Use `Ctrl+B` and
+`Ctrl+Shift+E` to restore Explorer if required.
 
-## Scientific walkthrough
+## Choose a scientific question
 
-The [reference LOBSTER column](generated/00_reference_column.md) introduces
-Oceananigans and OceanBioME model construction, coupling and simulation, with
-plots of vertical ecology and export. The [grazing experiment](generated/01_grazing.md)
-compares two biological parameter choices. The
-[physics appendix](generated/physical_forcing.md) explains the prepared light
-and mixing conditions used by both exercises.
+Each biological example changes one parameter between two 365-day columns.
+The reference seasonal forcing is identical in both treatments.
 
-For local installations, Python and Julia setup, and independent figures,
-follow [Running the examples on your own system](running_locally.md).
+1. [Light affinity](generated/04_light_affinity.md): reduce light half-saturation.
+2. [Nutrient affinity](generated/05_nutrient_affinity.md): reduce nitrate half-saturation.
+3. [Grazing](generated/01_grazing.md): reduce zooplankton grazing.
+4. [Particle sinking](generated/02_sinking.md): reduce large-particle sinking speed.
+5. [Remineralisation](generated/03_remineralisation.md): increase particulate recycling.
+6. [Phytoplankton mortality](generated/06_phytoplankton_mortality.md): increase density-dependent losses.
+
+Begin with the [reference column](generated/00_reference_column.md) to see
+how the model is constructed. The
+[physical-forcing appendix](generated/physical_forcing.md) explains the
+prepared light and mixing conditions used by every exercise.
+
+The mortality experiment provides a simple analogue of virus-like losses.
+The LOBSTER model has no separate virus population or infection process.
+
+For local installations and scripts, see
+[Running on your own system](running_locally.md).

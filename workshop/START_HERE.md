@@ -1,27 +1,37 @@
-# MASTS ASM 2026 — Getting started with modelling
+# MASTS ASM 2026 - Getting started with modelling
 
-**Start with `01_OceanBioME/00_reference_column.jl`.** Open it in the editor and
-choose **Julia: Execute File in REPL**. Each figure appears in the Julia
-Plot Pane as it is created; use plot history to revisit earlier figures.
-The first run may take longer while Julia initialises. Reuse the same REPL
-for subsequent experiments.
+**Start with `01_OceanBioME/00_reference_column.jl`.** In the editor, choose
+**Julia: Execute File in REPL**. Figures appear in the Julia Plot Pane in
+creation order; use the plot history to revisit an earlier figure.
 
-The examples use real `PhytoZoo`, `LOBSTER`, `NonhydrostaticModel`, `Simulation`,
-`JLD2Writer`, and `run!` calls. `MASTSWorkshop.column(:BATS)` prepares the
-idealised BATS-like water column, so you can focus on biological processes.
+Choose any biological experiment and edit the clearly marked parameter in
+the modified run. All use the same idealised BATS-like forcing:
 
-Then open **`01_OceanBioME/01_grazing.jl`** to compare control and reduced grazing.
-Both scripts simulate a complete 365-day seasonal cycle. Images, profiles and
-CSV diagnostics are saved under **`results/oceanbiome/`**. Expand this folder
-in Explorer and click any PNG to inspect the corresponding figure. Open a
-CSV file to inspect its columns in the interactive table; if it opens as text,
-right-click its tab and select **Reopen Editor With → CSV Table Viewer**.
+- `04_light_affinity.jl` - reduce light half-saturation (higher light affinity).
+- `05_nutrient_affinity.jl` - reduce nitrate half-saturation (higher nitrate affinity).
+- `01_grazing.jl` - reduce zooplankton grazing.
+- `02_sinking.jl` - reduce large-particle sinking speed.
+- `03_remineralisation.jl` - increase particulate remineralisation.
+- `06_phytoplankton_mortality.jl` - increase virus-like phytoplankton loss.
 
-The **`02_Abil/`** material will provide the afternoon Python/ML exercises.
-For full explanations and example figures, see the workshop's
-[documentation source](../docs/src/index.md) (published as Documenter pages).
+Each example contains two explicit 365-day simulations, with a common reference
+and one changed parameter. Compare surface phytoplankton and nitrate, detrital
+inventories, and daily/cumulative carbon export at **100 and 300 m**.
 
-In the terminal, from this folder, the reference can also be run with:
+Your PNGs, JLD2 files and diagnostic CSVs are in **`results/oceanbiome/`**.
+Click a PNG in Explorer or open a CSV as a table (if it opens as text, select
+**Reopen Editor With -> CSV Table Viewer**). The workshop guide and scientific
+explanations are available in the [documentation source](../docs/src/index.md).
+
+The mortality exercise is a representation of **density-dependent losses**;
+LOBSTER does not explicitly track viruses. We can explore it as a simple
+virus-like scenario and discuss how that differs from a mechanistic infection model.
+
+Later we will add a two-station comparison and prepared forcing for more
+stations so you can repeat these biological questions in contrasting settings.
+The Python/Abil.py practical is provided separately.
+
+From this folder, the reference can also be run in a terminal:
 
 ```bash
 julia --project=../oceanbiome 01_OceanBioME/00_reference_column.jl

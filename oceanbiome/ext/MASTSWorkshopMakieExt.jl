@@ -11,10 +11,10 @@ function matching_times(control, reduced)
     control.day == reduced.day || throw(ArgumentError("The two simulations must have matching output times"))
 end
 
-function compare_lines!(axis, control, reduced, metric)
+function compare_lines!(axis, control, reduced, metric; label = "Reduced grazing")
     lines!(axis, control.day, metric(control); color = blue, linewidth = 2.5, label = "Control")
     lines!(axis, reduced.day, metric(reduced); color = orange, linestyle = :dash,
-           linewidth = 2.5, label = "Reduced grazing")
+           linewidth = 2.5, label)
     return axis
 end
 
@@ -103,12 +103,15 @@ function MASTSWorkshop.plot_living_fraction(d, filename::AbstractString; preview
 end
 
 # Examine the response of upper-ocean phytoplankton and zooplankton biomass.
-function MASTSWorkshop.plot_plankton_balance(control, reduced, filename::AbstractString; preview::Bool = isinteractive())
+function MASTSWorkshop.plot_plankton_balance(control, reduced, filename::AbstractString;
+                                          figure_title::AbstractString = "Grazing experiment — upper-100 m plankton inventories",
+                                          preview::Bool = isinteractive())
     matching_times(control, reduced)
     metrics = (("Phytoplankton", "mmol N m⁻²", d -> d.upper_100m.phytoplankton),
                ("Zooplankton", "mmol N m⁻²", d -> d.upper_100m.zooplankton),
                ("Zooplankton share", "% of P + Z", d -> 100 .* d.upper_100m.zoo_fraction))
     figure = Figure(size = (1320, 1050), fontsize = 15)
+    Label(figure[0, :], figure_title; fontsize = 22, font = :bold)
     for (row, (title, unit, metric)) in enumerate(metrics)
         axis = Axis(figure[row, 1]; title, xlabel = "Day", ylabel = unit)
         compare_lines!(axis, control, reduced, metric)
@@ -211,9 +214,12 @@ function MASTSWorkshop.plot_idealised_physics(filename::AbstractString; preview:
 end
 
 # The difference panels resolve a grazing response even when curves overlap.
-function MASTSWorkshop.plot_grazing_response(control, reduced, filename::AbstractString; preview::Bool = isinteractive())
+function MASTSWorkshop.plot_grazing_response(control, reduced, filename::AbstractString;
+                                           figure_title::AbstractString = "Grazing experiment — surface phytoplankton and nitrate",
+                                           preview::Bool = isinteractive())
     matching_times(control, reduced)
     figure = Figure(size = (1100, 740), fontsize = 15)
+    Label(figure[0, :], figure_title; fontsize = 22, font = :bold)
     for (row, title, unit, metric) in ((1, "Phytoplankton", "mmol N m⁻³", d -> d.surface_P),
                                        (2, "Nitrate", "mmol N m⁻³", d -> d.surface_NO₃))
         axis = Axis(figure[row, 1]; title, xlabel = "Day", ylabel = unit)
@@ -231,9 +237,12 @@ function MASTSWorkshop.plot_grazing_response(control, reduced, filename::Abstrac
     return filename
 end
 
-function MASTSWorkshop.plot_carbon_export(control, reduced, filename::AbstractString; preview::Bool = isinteractive())
+function MASTSWorkshop.plot_carbon_export(control, reduced, filename::AbstractString;
+                                        figure_title::AbstractString = "Grazing experiment — carbon export",
+                                        preview::Bool = isinteractive())
     matching_times(control, reduced)
     figure = Figure(size = (1550, 780), fontsize = 15)
+    Label(figure[0, :], figure_title; fontsize = 22, font = :bold)
     for (row, depth, get_export) in ((1, 100, d -> d.export_100),
                                      (2, 300, d -> d.export_300))
         daily_axis = Axis(figure[row, 1]; title = "Daily export at $depth m",
@@ -251,6 +260,65 @@ function MASTSWorkshop.plot_carbon_export(control, reduced, filename::AbstractSt
                get_export(reduced).cumulative_g_C .- get_export(control).cumulative_g_C;
                color = orange, linewidth = 2.5)
         hlines!(difference_axis, [0.0]; color = :gray, linestyle = :dot)
+    end
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+# One comparison layout is reused by the self-paced parameter experiments.
+function MASTSWorkshop.plot_parameter_response(control, changed, filename::AbstractString;
+                                               label::AbstractString = "Modified",
+                                               figure_title::Union{Nothing, AbstractString} = nothing,
+                                               preview::Bool = isinteractive())
+    matching_times(control, changed)
+    metrics = (("Surface phytoplankton", "mmol N m⁻³", d -> d.surface_P),
+               ("Surface nitrate", "mmol N m⁻³", d -> d.surface_NO₃),
+               ("Upper 100 m detritus", "mmol N m⁻²", d -> d.upper_100m.detrital))
+    figure = Figure(size = (1280, 1000), fontsize = 15)
+    Label(figure[0, :], something(figure_title, "$label — surface response and detritus");
+          fontsize = 22, font = :bold)
+    for (row, (title, unit, metric)) in enumerate(metrics)
+        axis = Axis(figure[row, 1]; title, xlabel = "Day", ylabel = unit)
+        compare_lines!(axis, control, changed, metric; label)
+        axislegend(axis; position = :rt, framevisible = false)
+
+        difference = Axis(figure[row, 2]; title = "Change in $title",
+                          xlabel = "Day", ylabel = "$label − control ($unit)")
+        lines!(difference, control.day, metric(changed) .- metric(control);
+               color = orange, linewidth = 2.5)
+        hlines!(difference, [0.0]; color = :gray, linestyle = :dot)
+    end
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+function MASTSWorkshop.plot_parameter_export(control, changed, filename::AbstractString;
+                                             label::AbstractString = "Modified",
+                                             figure_title::Union{Nothing, AbstractString} = nothing,
+                                             preview::Bool = isinteractive())
+    matching_times(control, changed)
+    figure = Figure(size = (1550, 780), fontsize = 15)
+    Label(figure[0, :], something(figure_title, "$label — carbon export");
+          fontsize = 22, font = :bold)
+    for (row, depth, get_export) in ((1, 100, d -> d.export_100),
+                                     (2, 300, d -> d.export_300))
+        daily = Axis(figure[row, 1]; title = "Daily export at $depth m",
+                     xlabel = "Day", ylabel = "mg C m⁻² day⁻¹")
+        compare_lines!(daily, control, changed, d -> get_export(d).daily_mg_C; label)
+        axislegend(daily; position = :rt, framevisible = false)
+
+        cumulative = Axis(figure[row, 2]; title = "Cumulative export at $depth m",
+                          xlabel = "Day", ylabel = "g C m⁻²")
+        compare_lines!(cumulative, control, changed, d -> get_export(d).cumulative_g_C; label)
+
+        difference = Axis(figure[row, 3]; title = "Change in cumulative export at $depth m",
+                          xlabel = "Day", ylabel = "$label − control (g C m⁻²)")
+        lines!(difference, control.day,
+               get_export(changed).cumulative_g_C .- get_export(control).cumulative_g_C;
+               color = orange, linewidth = 2.5)
+        hlines!(difference, [0.0]; color = :gray, linestyle = :dot)
     end
     save(filename, figure)
     preview && display(figure)

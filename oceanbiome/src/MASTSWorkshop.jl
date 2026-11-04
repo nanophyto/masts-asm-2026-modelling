@@ -21,7 +21,7 @@ export column, results_directory,
        upper_nitrogen_partition, analyse_column_output, write_diagnostics, write_export_profile,
        plot_vertical_evolution, plot_reference_export, plot_export_profile, plot_idealised_physics,
        plot_nitrogen_partition, plot_living_fraction, plot_plankton_balance,
-       plot_grazing_response, plot_carbon_export
+       plot_grazing_response, plot_carbon_export, plot_parameter_response, plot_parameter_export
 
 # The CairoMakie extension supplies these methods when plotting is requested.
 function plot_vertical_evolution end
@@ -33,5 +33,7 @@ function plot_living_fraction end
 function plot_plankton_balance end
 function plot_grazing_response end
 function plot_carbon_export end
+function plot_parameter_response end
+function plot_parameter_export end
 
 end

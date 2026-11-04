@@ -26,7 +26,7 @@ function run_exercise(name, output_dir)
     return strip(replace(output, root * "/" => ""))
 end
 
-function budget_summary(label, filename)
+function check_budget(label, filename)
     lines = readlines(filename)
     length(lines) >= 3 || error("Expected multiple diagnostic samples in $filename")
     columns = split(first(lines), ',')
@@ -39,10 +39,8 @@ function budget_summary(label, filename)
     initial_inventory = first(inventory)
     initial_inventory > 0 || error("Non-positive nitrogen inventory in $filename")
     max_percent = 100 * maximum(abs, residual) / initial_inventory
-    final_percent = 100 * last(residual) / initial_inventory
 
     max_percent <= 5 || error("$label nitrogen-budget residual exceeds 5%: $(round(max_percent; digits=2))%")
-    return "| $label | $(round(final_percent; digits=2))% | $(round(max_percent; digits=2))% |"
 end
 
 function check_png(filename)
@@ -55,6 +53,12 @@ end
 
 reference_dir = joinpath(output_base, "reference_column")
 grazing_dir = joinpath(output_base, "grazing")
+parameter_exercises = (("02_sinking.jl", "sinking", "slow_sinking"),
+                       ("03_remineralisation.jl", "remineralisation", "fast_remineralisation"),
+                       ("04_light_affinity.jl", "light_affinity", "higher_light_affinity"),
+                       ("05_nutrient_affinity.jl", "nutrient_affinity", "higher_nutrient_affinity"),
+                       ("06_phytoplankton_mortality.jl", "phytoplankton_mortality", "higher_mortality"))
+parameter_outputs = Dict{String, Union{String, Nothing}}()
 # For documentation-only fixes, reuse the previously generated annual
 # profiles, CSV diagnostics, and figures without repeating the simulations.
 reference_output, grazing_output = if reuse_results
@@ -74,6 +78,21 @@ else
      run_exercise("01_grazing.jl", grazing_dir))
 end
 
+# Fast PR documentation checks generate the new pages without re-running
+# another ten annual simulations. Published full builds generate their figures.
+for (script, experiment, _) in parameter_exercises
+    parameter_outputs[experiment] = (quick || reuse_results) ? nothing : run_exercise(script, joinpath(output_base, experiment))
+end
+
+# The physics diagram belongs to the appendix; the reference exercise
+# concentrates on simulation results and its five scientific figures.
+physics_figure = joinpath(reference_dir, "reference_physics.png")
+if !isfile(physics_figure)
+    mkpath(reference_dir)
+    code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_idealised_physics(ARGS[1]; preview=false)"
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $physics_figure`)
+end
+
 figures = (
     (reference_dir, "reference_vertical_evolution.png"),
     (reference_dir, "reference_nitrogen_partition.png"),
@@ -85,16 +104,18 @@ figures = (
     (grazing_dir, "grazing_plankton_balance.png"),
     (grazing_dir, "carbon_export.png"),
 )
-for (directory, filename) in figures
+parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(kind).png")
+                          for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
+for (directory, filename) in (quick ? figures : (figures..., parameter_figures...))
     check_png(joinpath(directory, filename))
     if !quick
         cp(joinpath(directory, filename), joinpath(assets_dir, filename); force = true)
     end
 end
 
-function write_result_assets(prefix, output, checks)
+function write_result_assets(prefix, output)
     quick && return
-    figure_names = last.(figures)
+    figure_names = last.((figures..., parameter_figures...))
     if !isnothing(output)
         log_lines = filter(line -> !any(name -> occursin(name, line), figure_names),
                            split(output, '\n'))
@@ -102,27 +123,24 @@ function write_result_assets(prefix, output, checks)
               "**365-day simulation — console output**\n\n````text\n" *
               join(log_lines, "\n") * "\n````\n")
     end
-    write(joinpath(assets_dir, "$(prefix)_budget.md"), """
-        ### Nitrogen-budget check
-
-        The budget compares the seven-tracer nitrogen inventory with sinking
-        loss through the open bottom boundary. The residual is relative to
-        the first saved inventory.
-
-        | Experiment | Final residual | Maximum absolute residual |
-        |:-----------|---------------:|--------------------------:|
-        $(join(checks, "\n"))
-
-        The acceptance threshold is 5% of the starting inventory. The
-        diagnostic uses saved profiles and an upwind estimate of sinking flux.
-        """)
 end
 
-reference_checks = [budget_summary("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))]
-grazing_checks = [budget_summary(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
-                  for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))]
-write_result_assets("reference_column", reference_output, reference_checks)
-write_result_assets("grazing", grazing_output, grazing_checks)
+# Preserve scientific budget validation as a build-time check.
+check_budget("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))
+for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))
+    check_budget(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
+end
+write_result_assets("reference_column", reference_output)
+write_result_assets("grazing", grazing_output)
+if !quick
+    for (_, experiment, modified) in parameter_exercises
+        directory = joinpath(output_base, experiment)
+        for (label, name) in (("Control", "control"), ("Modified", modified))
+            check_budget(label, joinpath(directory, "$(name)_diagnostics.csv"))
+        end
+        write_result_assets(experiment, parameter_outputs[experiment])
+    end
+end
 
 reference_note = "Reference results and figures are provided in the published workshop documentation."
 function asset_text(filename)
@@ -149,7 +167,6 @@ make_tutorial("00_reference_column.jl", (
     "WORKSHOP_REFERENCE_LIVING_FIGURE" => figure_block("reference_living_fraction.png", "Living particulate and dissolved-organic nitrogen fractions"),
     "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
     "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–500 m and Martin-curve comparison"),
-    "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
 ))
 
 make_tutorial("01_grazing.jl", (
@@ -157,8 +174,15 @@ make_tutorial("01_grazing.jl", (
     "WORKSHOP_GRAZING_FIGURE" => figure_block("grazing_response.png", "Response to reduced grazing"),
     "WORKSHOP_PLANKTON_BALANCE_FIGURE" => figure_block("grazing_plankton_balance.png", "Phytoplankton and zooplankton inventories and grazing response"),
     "WORKSHOP_EXPORT_FIGURE" => figure_block("carbon_export.png", "Control and reduced-grazing carbon export"),
-    "WORKSHOP_BUDGET_CHECK" => asset_text("grazing_budget.md"),
 ))
+
+for (script, experiment, _) in parameter_exercises
+    make_tutorial(script, (
+        "WORKSHOP_PARAMETER_OUTPUT" => asset_text("$(experiment)_console.md"),
+        "WORKSHOP_PARAMETER_RESPONSE_FIGURE" => figure_block("$(experiment)_response.png", "Annual response to $(replace(experiment, '_' => ' '))"),
+        "WORKSHOP_PARAMETER_EXPORT_FIGURE" => figure_block("$(experiment)_export.png", "Carbon export response to $(replace(experiment, '_' => ' '))"),
+    ))
+end
 
 # The appendix is a template: Documenter should process only its generated
 # copy, where the relative links to both tutorials are correct.
@@ -176,7 +200,14 @@ makedocs(
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
         "Reference column" => "generated/00_reference_column.md",
-        "Parameter experiments" => "generated/01_grazing.md",
+        "Parameter experiments" => [
+            "Light affinity" => "generated/04_light_affinity.md",
+            "Nutrient affinity" => "generated/05_nutrient_affinity.md",
+            "Grazing" => "generated/01_grazing.md",
+            "Particle sinking" => "generated/02_sinking.md",
+            "Remineralisation" => "generated/03_remineralisation.md",
+            "Phytoplankton mortality" => "generated/06_phytoplankton_mortality.md",
+        ],
         "Running on your own system" => "running_locally.md",
         "Appendix" => ["Physical forcing" => "generated/physical_forcing.md"],
     ],
