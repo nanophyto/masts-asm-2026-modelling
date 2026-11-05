@@ -56,6 +56,7 @@ end
 
 reference_dir = joinpath(output_base, "reference_column")
 grazing_dir = joinpath(output_base, "grazing")
+station_dir = joinpath(output_base, "bats_nabe")
 parameter_exercises = (("02_sinking.jl", "sinking", "slow_sinking"),
                        ("03_remineralisation.jl", "remineralisation", "fast_remineralisation"),
                        ("04_light_affinity.jl", "light_affinity", "higher_light_affinity"),
@@ -90,6 +91,11 @@ for (script, experiment, _) in parameter_exercises
     parameter_outputs[experiment] = (quick || reuse_results || content_only) ? nothing : run_exercise(script, joinpath(output_base, experiment))
 end
 
+# The deep BATS-NABE station exercise runs both annual baselines and
+# generates fresh figures during every full scientific documentation build.
+station_output = (quick || reuse_results || content_only) ? nothing :
+                 run_exercise("07_bats_nabe.jl", station_dir)
+
 # The physics diagram belongs to the appendix; the reference exercise
 # concentrates on simulation results and its five scientific figures.
 physics_figure = joinpath(reference_dir, "reference_physics.png")
@@ -112,8 +118,10 @@ figures = (
 )
 parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(kind).png")
                           for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
+station_figures = ((station_dir, "station_forcing.png"),
+                   (station_dir, "station_comparison.png"))
 if !content_only
-    for (directory, filename) in (quick ? figures : (figures..., parameter_figures...))
+    for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
         check_png(joinpath(directory, filename))
         if !quick
             cp(joinpath(directory, filename), joinpath(assets_dir, filename); force = true)
@@ -123,7 +131,7 @@ end
 
 function write_result_assets(prefix, output, checks)
     (quick || content_only) && return
-    figure_names = last.((figures..., parameter_figures...))
+    figure_names = last.((figures..., parameter_figures..., station_figures...))
     if !isnothing(output)
         log_lines = filter(line -> !any(name -> occursin(name, line), figure_names),
                            split(output, '\n'))
@@ -160,6 +168,10 @@ if !content_only
                       for (label, name) in (("Control", "control"), ("Modified", modified))]
             write_result_assets(experiment, parameter_outputs[experiment], checks)
         end
+        station_checks = [budget_summary(string(station),
+                          joinpath(station_dir, "$(lowercase(string(station)))_diagnostics.csv"))
+                          for station in (:BATS, :NABE)]
+        write_result_assets("bats_nabe", station_output, station_checks)
     end
 
 end
@@ -171,7 +183,7 @@ function asset_text(filename)
 end
 function figure_block(filename, caption)
     path = joinpath(assets_dir, filename)
-    if !isfile(path) && !quick
+    if !isfile(path) && !quick && !content_only
         error("Missing documentation figure: $(path). Run a full documentation build to generate it.")
     end
     isfile(path) ? "![$caption](../assets/$filename)" : "**$caption:** $reference_note"
@@ -212,6 +224,13 @@ for (script, experiment, _) in parameter_exercises
     ))
 end
 
+make_tutorial("07_bats_nabe.jl", (
+    "WORKSHOP_STATION_FORCING_FIGURE" =>
+        figure_block("station_forcing.png", "Contrasting idealised BATS and NABE physical forcing"),
+    "WORKSHOP_STATION_COMPARISON_FIGURE" =>
+        figure_block("station_comparison.png", "Annual BATS-NABE ecosystem and deep-export comparison"),
+))
+
 # The appendix is a template: Documenter should process only its generated
 # copy, where the relative links to both tutorials are correct.
 physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
@@ -228,6 +247,7 @@ makedocs(
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
         "Reference column" => "generated/00_reference_column.md",
+        "BATS and NABE comparison" => "generated/07_bats_nabe.md",
         "Parameter experiments" => [
             "Light affinity" => "generated/04_light_affinity.md",
             "Nutrient affinity" => "generated/05_nutrient_affinity.md",

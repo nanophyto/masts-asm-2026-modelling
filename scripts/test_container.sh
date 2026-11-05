@@ -27,7 +27,8 @@ docker run --rm \
                        workshop/01_OceanBioME/03_remineralisation.jl \
                        workshop/01_OceanBioME/04_light_affinity.jl \
                        workshop/01_OceanBioME/05_nutrient_affinity.jl \
-                       workshop/01_OceanBioME/06_phytoplankton_mortality.jl; do
+                       workshop/01_OceanBioME/06_phytoplankton_mortality.jl \
+                       workshop/01_OceanBioME/07_bats_nabe.jl; do
             if [[ ! -f "$example" ]]; then
                 echo "ERROR: $example is absent from this image. A previous Docker build may have failed; rebuild successfully before running the smoke test." >&2
                 exit 1
@@ -65,6 +66,14 @@ docker run --rm \
         echo "Phytoplankton mortality parameter experiment:"
         MASTS_OUTPUT_DIR=/results/phytoplankton_mortality julia --threads=1 --startup-file=no --project=oceanbiome \
           workshop/01_OceanBioME/06_phytoplankton_mortality.jl
+        echo "Idealised Atlantic stations (2 simulated days each):"
+        MASTS_COMPARISON_DAYS=2 MASTS_OUTPUT_DIR=/results/bats_nabe \
+          julia --threads=1 --startup-file=no --project=oceanbiome \
+          workshop/01_OceanBioME/07_bats_nabe.jl
+        test -s /results/bats_nabe/station_forcing.png
+        test -s /results/bats_nabe/station_comparison.png
+        test -s /results/bats_nabe/bats_export_profile.csv
+        test -s /results/bats_nabe/nabe_export_profile.csv
         python container/check_outputs.py /results
     '
 

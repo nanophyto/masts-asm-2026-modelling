@@ -3,25 +3,53 @@ using Oceananigans.Units: meters, minutes
 using Oceananigans.TurbulenceClosures: ScalarDiffusivity, VerticallyImplicitTimeDiscretization
 
 """
-    column(:BATS)
+    deep_grid_faces()
 
-Prepare the physical and numerical environment for an OceanBioME column.
-Returns `(grid, time_step, initial, closure, surface_PAR)` for use with the
-native `LOBSTER` and `NonhydrostaticModel` constructors.
-
-`:BATS` currently uses the tested **idealised BATS-like** annual cycle; observed
-station forcings will be added after validation.
+The shared BATS/NABE research grid extends to 1200 m. It has 10 m cells in
+0-300 m, 20 m cells in 300-600 m, and 40 m cells in 600-1200 m (60 cells).
+Its faces include 100, 300, and 1000 m for carbon export diagnostics.
 """
-function column(station::Symbol)
-    station === :BATS || throw(ArgumentError("No prepared column for $station (available: :BATS)"))
+function deep_grid_faces()
+    return vcat(collect(-1200.0:40.0:-600.0),
+                collect(-580.0:20.0:-300.0),
+                collect(-290.0:10.0:0.0))
+end
 
-    grid = RectilinearGrid(size = 50, extent = 500meters,
-                           topology = (Flat, Flat, Bounded))
+"""
+    column(:BATS; deep=false)
+    column(:NABE; deep=true)
+
+Return `(grid, time_step, initial, closure, surface_PAR)` for the native
+OceanBioME `LOBSTER` and Oceananigans `NonhydrostaticModel` constructors.
+Both stations use *idealised* Northern Hemisphere annual cycles.
+
+The default BATS column is the original tested 500 m / 50-cell workshop
+reference. For direct BATS-NABE comparisons use `deep=true` at both stations,
+which selects the same stretched 1200 m / 60-cell grid. The NABE reference
+uses deeper winter mixing, rapid spring shoaling, and an illustrative
+winter nitrate profile. See the physical-forcing appendix for assumptions.
+"""
+function column(station::Symbol; deep::Bool = station === :NABE)
+    station in (:BATS, :NABE) ||
+        throw(ArgumentError("No prepared column for $station (available: :BATS, :NABE)"))
+
+    grid = if deep
+        faces = deep_grid_faces()
+        RectilinearGrid(size = length(faces) - 1, z = faces,
+                        topology = (Flat, Flat, Bounded))
+    else
+        RectilinearGrid(size = 50, extent = 500meters,
+                        topology = (Flat, Flat, Bounded))
+    end
+
+    light = station === :BATS ? surface_PAR : nabe_surface_PAR
+    mixing = station === :BATS ? vertical_diffusivity : nabe_vertical_diffusivity
+    initial = station === :NABE ? nabe_initial_conditions() :
+              deep ? deep_bats_initial_conditions() : initial_conditions()
     time_step = 30minutes
-    initial = initial_conditions()
     closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
-                                ν = vertical_diffusivity, κ = vertical_diffusivity)
-    return (; grid, time_step, initial, closure, surface_PAR)
+                                ν = mixing, κ = mixing)
+    return (; grid, time_step, initial, closure, surface_PAR = light)
 end
 
 """Return the folder for an experiment's saved results, creating it if needed."""

@@ -16,7 +16,8 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     @test Meta.parseall(read(joinpath(@__DIR__, "..", "ext", "MASTSWorkshopMakieExt.jl"), String)) isa Expr
     @test hasmethod(MASTSWorkshop.analyse_column_output, Tuple{String, Any})
     for name in ("02_sinking.jl", "03_remineralisation.jl", "04_light_affinity.jl",
-                 "05_nutrient_affinity.jl", "06_phytoplankton_mortality.jl")
+                 "05_nutrient_affinity.jl", "06_phytoplankton_mortality.jl",
+                 "07_bats_nabe.jl")
         path = joinpath(@__DIR__, "..", "..", "workshop", "01_OceanBioME", name)
         @test Meta.parseall(read(path, String)) isa Expr
     end
@@ -170,5 +171,67 @@ end
                   make_model(phyto = low_nutrients), make_model(phyto = mortality))
         run!(Simulation(model; Δt = time_step, stop_time = 2days))
         @test all(tracer -> all(isfinite, interior(tracer)), values(model.tracers))
+    end
+end
+
+@testset "NABE and stretched deep columns" begin
+    faces = MASTSWorkshop.deep_grid_faces()
+    @test length(faces) == 61
+    @test first(faces) == -1200.0 && last(faces) == 0.0
+    @test all(diff(faces) .> 0)
+    @test minimum(diff(faces)) == 10.0
+    @test maximum(diff(faces)) == 40.0
+    for depth in (100, 300, 1000)
+        @test -depth in faces
+    end
+
+    b = MASTSWorkshop.column(:BATS; deep = true)
+    n = MASTSWorkshop.column(:NABE)
+    @test b.grid.Nz == n.grid.Nz == 60
+    @test b.grid.Lz == n.grid.Lz == 1200
+    @test (face_index(n.grid, 100), face_index(n.grid, 300), face_index(n.grid, 1000)) == (51, 31, 6)
+    @test_throws ArgumentError face_index(n.grid, 350)
+    @test_throws ArgumentError face_index(n.grid, 1250)
+    @test b.time_step == n.time_step == 30minutes
+    @test n.surface_PAR !== surface_PAR
+    @test MASTSWorkshop.nabe_mixed_layer_depth(0) < -300
+    @test MASTSWorkshop.nabe_mixed_layer_depth(180days) > -35
+    @test MASTSWorkshop.nabe_mixed_layer_depth(0) < mixed_layer_depth(0)
+    @test MASTSWorkshop.nabe_surface_PAR(180days) > MASTSWorkshop.nabe_surface_PAR(0)
+    @test n.initial.NO₃(0, 0, -5) > b.initial.NO₃(0, 0, -5)
+    @test n.initial.NO₃(0, 0, -1000) > n.initial.NO₃(0, 0, -5)
+    @test n.initial.P(0, 0, -1000) < n.initial.P(0, 0, -5)
+    @test MASTSWorkshop.column(:BATS).grid.Nz == 50  # original lessons unchanged
+
+    # A nonuniform profile must be integrated using each cell's thickness.
+    synthetic = (; (name => fill(2.0, 60, 3) for name in
+                     (:NO₃, :NH₄, :P, :Z, :DOM, :sPOM, :bPOM))...)
+    widths = diff(faces)
+    partition = upper_nitrogen_partition(synthetic, widths, face_index(n.grid, 100))
+    @test partition.total == fill(1400.0, 3)  # 7 pools * 2 mmol/m3 * 100 m
+    @test_throws DimensionMismatch upper_nitrogen_partition(synthetic, [10.0], 51)
+
+    # Construct and run the same native LOBSTER physics in both environments.
+    for (station, config) in ((:BATS, b), (:NABE, n))
+        grid, dt, initial, closure, light = config
+        bgc = LOBSTER(grid; surface_PAR = light, scale_negatives = true)
+        model = NonhydrostaticModel(grid; closure, biogeochemistry = bgc)
+        set!(model; initial...)
+        @test sinking_courant(model, dt) < 1
+        mktempdir() do dir
+            filename = joinpath(dir, "$(station)_profiles.jld2")
+            sim = Simulation(model; Δt = dt, stop_time = 2days)
+            sim.output_writers[:profiles] = JLD2Writer(model, model.tracers;
+                filename, schedule = TimeInterval(1day), overwrite_files = true)
+            run!(sim)
+            @test all(tracer -> all(isfinite, interior(tracer)), values(model.tracers))
+            result = MASTSWorkshop.analyse_column_output(filename, model)
+            @test length(result.z) == 60
+            @test result.export_1000 !== nothing
+            @test 1000 in result.export_profile.depths
+            @test all(isfinite, result.nitrogen_inventory)
+            @test isapprox(first(result.export_profile.depths), 50; atol = 1e-8)
+            @test maximum(abs, result.budget_residual) / first(result.nitrogen_inventory) < 0.05
+        end
     end
 end

@@ -31,26 +31,46 @@ exercise: `surface_PAR(t)`, `mixed_layer_depth(t)` and
 vertical diffusivity as its closure, and LOBSTER calculates the attenuation
 of PAR within the column.
 
-### Temperature and further physical variables
+## Idealised BATS and NABE comparison
 
-The initial idealised column uses light and vertical diffusivity to drive
-its biological and transport calculations. The station-specific exercises
-will add prepared temperature and other physical information as needed by
-the selected model configuration. Their units, temporal resolution and
-source datasets will be documented here.
+The [BATS-NABE comparison](07_bats_nabe.md) adds a North Atlantic spring-bloom
+scenario and uses the same stretched grid at both stations. The original BATS
+reference exercises keep their tested 500 m / 50-cell configuration.
 
-## Station columns: BATS, HOT, NABE and DYFAMED
+| Setting | Deep BATS | Idealised NABE |
+|:--|:--|:--|
+| Location represented | 31.7 N, 64.2 W | ~47 N, 20 W |
+| Winter mixed-layer depth | 140 m | ~350 m |
+| Summer mixed-layer depth | 15 m | ~20 m |
+| Surface PAR | 2-122 W/m2 | 2-98 W/m2 |
+| Spring mixed-layer transition | Smooth annual cycle | Rapid shoaling around day 100 |
+| Initial near-surface nitrate | ~0.7 mmol N/m3 | ~6.0 mmol N/m3 |
+| Vertical diffusivity, surface mixed layer | up to ~5.1e-3 m2/s | up to ~1.01e-2 m2/s |
 
-When the station-specific forcing datasets are introduced, this appendix
-will compare their **surface light, vertical mixing, mixed-layer depth and
-temperature** on consistent time/depth axes. Each station will have the
-same set of plots, with its forcing source and units alongside them.
+These parameters are **first-pass teaching scenarios**, chosen to distinguish
+subtropical conditions and a bloom-forming temperate Atlantic environment.
+The nitrate profiles are depth-dependent but are not yet calibrated against
+station observations. Initial plankton and organic-matter fields also decrease
+with depth to limit artificial deep biological inventories. The annual cycle begins in midwinter.
 
-The intended contrasts include subtropical stratification at BATS, a
-weakly seasonal subtropical regime at HOT, a strong North Atlantic spring
-bloom setting at NABE, and seasonal mixing in the Mediterranean at DYFAMED.
-These are the regimes the station exercises will test using the prepared
-forcing.
+The stretched domain reaches 1200 m with 60 cells, preserving 10 m resolution
+through the upper 300 m, then increasing to 20 m and 40 m cells below 300 m
+and 600 m. Export can be diagnosed at grid faces 100, 300, and 1000 m. All
+vertical inventories use the physical thickness of each cell.
+
+### Scientific sources and next validation
+
+- [OceanBioME idealised North Atlantic column](https://oceanbiome.github.io/OceanBioME.jl/stable/generated/column/):
+  precedent for deep winter mixing, rapid spring shoaling and seasonal PAR.
+- [NOAA World Ocean Atlas 2023](https://www.ncei.noaa.gov/access/world-ocean-atlas-2023/):
+  source for the planned station-specific nitrate and temperature climatologies.
+- [U.S. JGOFS NABE field observations](https://www.bco-dmo.org/dataset/2574/description):
+  trace-metal and water-column measurements from the 1989 field campaign.
+
+The present LOBSTER column is forced by prescribed light and vertical mixing;
+temperature is not passed as a separate prognostic tracer or remineralisation
+forcing. Temperature-dependent remineralisation is a candidate follow-up
+experiment once the default column behaviour has been benchmarked.
 
 Return to the [reference column](00_reference_column.md) or continue with the
 [grazing experiment](01_grazing.md).

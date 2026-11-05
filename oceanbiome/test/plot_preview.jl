@@ -24,7 +24,16 @@ using CairoMakie
     reduced = merge(control, (; surface_P = [0.2, 0.3, 0.4],
                               surface_NO₃ = [0.9, 0.8, 0.7]))
 
-    # Same sequence as the two workshop exercises.
+    deep_profile = (; depths = [100, 200, 300, 500, 600, 800, 1000, 1200],
+                     mean_daily_mg_C = [1.5, 1.2, 1.0, 0.8, 0.7, 0.6, 0.5, 0.4],
+                     integrated_g_C = [0.2, 0.18, 0.16, 0.14, 0.12, 0.1, 0.08, 0.06],
+                     window_days = 2.0, martin_b = 0.7)
+    export_1000 = (; daily_mg_C = [0.4, 0.5, 0.6],
+                     cumulative_g_C = [0.0, 0.02, 0.04])
+    deep_bats = merge(control, (; export_1000, export_profile = deep_profile))
+    deep_nabe = merge(reduced, (; export_1000, export_profile = deep_profile))
+
+    # Same sequence as the workshop exercises.
     plots = ((MASTSWorkshop.plot_vertical_evolution, (control,), "reference_vertical_evolution.png"),
              (MASTSWorkshop.plot_nitrogen_partition, (control,), "reference_nitrogen_partition.png"),
              (MASTSWorkshop.plot_living_fraction, (control,), "reference_living_fraction.png"),
@@ -35,7 +44,9 @@ using CairoMakie
              (MASTSWorkshop.plot_plankton_balance, (control, reduced), "grazing_plankton_balance.png"),
              (MASTSWorkshop.plot_carbon_export, (control, reduced), "carbon_export.png"),
              (MASTSWorkshop.plot_parameter_response, (control, reduced), "parameter_response.png"),
-             (MASTSWorkshop.plot_parameter_export, (control, reduced), "parameter_export.png"))
+             (MASTSWorkshop.plot_parameter_export, (control, reduced), "parameter_export.png"),
+             (MASTSWorkshop.plot_station_forcing, (), "station_forcing.png"),
+             (MASTSWorkshop.plot_station_comparison, (deep_bats, deep_nabe), "station_comparison.png"))
 
     mktempdir() do dir
         for (plot, args, name) in plots

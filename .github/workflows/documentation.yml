@@ -43,8 +43,8 @@ jobs:
           DOCS_QUICK: "false"
           DOCS_CONTENT_ONLY: "false"
           DOCS_REUSE_RESULTS: "false"
-        # Each build runs seven annual examples, checks their numerical
-        # diagnostics, and regenerates all 19 scientific PNG figures.
+        # Each build runs the seven existing annual exercises plus both
+        # Atlantic station controls, checks diagnostics, and regenerates figures.
         # GitHub Pages deployment is handled by the official actions below.
         run: |
           rm -rf outputs/oceanbiome/reference_docs

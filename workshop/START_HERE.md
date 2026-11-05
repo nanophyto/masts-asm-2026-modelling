@@ -27,8 +27,10 @@ The mortality exercise is a representation of **density-dependent losses**;
 LOBSTER does not explicitly track viruses. We can explore it as a simple
 virus-like scenario and discuss how that differs from a mechanistic infection model.
 
-Later we will add a two-station comparison and prepared forcing for more
-stations so you can repeat these biological questions in contrasting settings.
+For a deeper Atlantic contrast, open `01_OceanBioME/07_bats_nabe.jl`.
+It compares idealised BATS and NABE conditions on the same stretched 1200 m
+grid and diagnoses particulate export at 1000 m. A two-day smoke run can be
+selected with `MASTS_COMPARISON_DAYS=2`; the default run lasts 365 days.
 The Python/Abil.py practical is provided separately.
 
 From this folder, the reference can also be run in a terminal:

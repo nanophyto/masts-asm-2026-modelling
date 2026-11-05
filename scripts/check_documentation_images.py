@@ -31,6 +31,7 @@ FIGURES = {
     "06_phytoplankton_mortality": (
         "phytoplankton_mortality_response.png", "phytoplankton_mortality_export.png"
     ),
+    "07_bats_nabe": ("station_forcing.png", "station_comparison.png"),
     "physical_forcing": ("reference_physics.png",),
 }
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"

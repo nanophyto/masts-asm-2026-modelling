@@ -3,6 +3,8 @@ module MASTSWorkshopMakieExt
 using MASTSWorkshop
 using CairoMakie
 using Oceananigans.Units: days
+using Oceananigans: Center
+using Oceananigans.Grids: znodes
 
 const blue = :steelblue
 const orange = :darkorange
@@ -325,4 +327,96 @@ function MASTSWorkshop.plot_parameter_export(control, changed, filename::Abstrac
     return filename
 end
 
+# Compare the idealised physics used at the two stations before fitting biology.
+function MASTSWorkshop.plot_station_forcing(filename::AbstractString; preview::Bool = isinteractive())
+    days_in_year = collect(0:5:365)
+    times = days_in_year .* days
+    grid = MASTSWorkshop.column(:NABE).grid
+    z = collect(znodes(grid, Center()))
+    bats = MASTSWorkshop.column(:BATS; deep = true).initial
+    nabe = MASTSWorkshop.column(:NABE).initial
+
+    figure = Figure(size = (1250, 860), fontsize = 15)
+    Label(figure[0, :], "Idealised Atlantic columns: BATS and NABE";
+          fontsize = 22, font = :bold)
+    light = Axis(figure[1, 1]; title = "Surface photosynthetically available radiation",
+                 xlabel = "Day", ylabel = "W m⁻²")
+    lines!(light, days_in_year, MASTSWorkshop.surface_PAR.(times);
+           color = blue, linewidth = 2.5, label = "BATS")
+    lines!(light, days_in_year, MASTSWorkshop.nabe_surface_PAR.(times);
+           color = orange, linewidth = 2.5, label = "NABE")
+    axislegend(light; position = :rt, framevisible = false)
+
+    mld = Axis(figure[1, 2]; title = "Mixed-layer depth", xlabel = "Day", ylabel = "Depth (m)")
+    lines!(mld, days_in_year, MASTSWorkshop.mixed_layer_depth.(times);
+           color = blue, linewidth = 2.5, label = "BATS")
+    lines!(mld, days_in_year, MASTSWorkshop.nabe_mixed_layer_depth.(times);
+           color = orange, linewidth = 2.5, label = "NABE")
+    axislegend(mld; position = :rb, framevisible = false)
+
+    nitrate = Axis(figure[2, 1]; title = "Prescribed initial nitrate (midwinter)",
+                   xlabel = "mmol N m⁻³", ylabel = "Depth (m)")
+    lines!(nitrate, [bats.NO₃(0, 0, zz) for zz in z], z;
+           color = blue, linewidth = 2.5, label = "BATS")
+    lines!(nitrate, [nabe.NO₃(0, 0, zz) for zz in z], z;
+           color = orange, linewidth = 2.5, label = "NABE")
+    axislegend(nitrate; position = :rb, framevisible = false)
+
+    mixing = Axis(figure[2, 2]; title = "Vertical diffusivity on day 100",
+                  xlabel = "m² s⁻¹", ylabel = "Depth (m)", xscale = log10)
+    day100 = 100days
+    lines!(mixing, [MASTSWorkshop.vertical_diffusivity(zz, day100) for zz in z], z;
+           color = blue, linewidth = 2.5, label = "BATS")
+    lines!(mixing, [MASTSWorkshop.nabe_vertical_diffusivity(zz, day100) for zz in z], z;
+           color = orange, linewidth = 2.5, label = "NABE")
+    axislegend(mixing; position = :rb, framevisible = false)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
 end
+
+# Compare the two annual ecosystem references on the same deep grid.
+function MASTSWorkshop.plot_station_comparison(bats, nabe, filename::AbstractString;
+                                              preview::Bool = isinteractive())
+    matching_times(bats, nabe)
+    isnothing(bats.export_1000) && throw(ArgumentError("BATS must use the deep grid"))
+    isnothing(nabe.export_1000) && throw(ArgumentError("NABE must use the deep grid"))
+
+    figure = Figure(size = (1250, 860), fontsize = 15)
+    Label(figure[0, :], "Idealised BATS and NABE: annual ecosystem response";
+          fontsize = 22, font = :bold)
+    for (column, title, metric) in ((1, "Surface phytoplankton", d -> d.surface_P),
+                                    (2, "Surface nitrate", d -> d.surface_NO₃))
+        axis = Axis(figure[1, column]; title, xlabel = "Day", ylabel = "mmol N m⁻³")
+        lines!(axis, bats.day, metric(bats); color = blue, linewidth = 2.5, label = "BATS")
+        lines!(axis, nabe.day, metric(nabe); color = orange, linewidth = 2.5, label = "NABE")
+        axislegend(axis; position = :rt, framevisible = false)
+    end
+
+    attenuation = Axis(figure[2, 1]; title = "Late-season particle flux attenuation",
+                       xlabel = "F(z) / F(100)", ylabel = "Depth (m)")
+    for (station, data, color) in (("BATS", bats, blue), ("NABE", nabe, orange))
+        profile = data.export_profile
+        index = findfirst(==(100), profile.depths)
+        reference = profile.mean_daily_mg_C[index]
+        if reference > 0
+            selected = findall(d -> 100 <= d <= 1000, profile.depths)
+            lines!(attenuation, profile.mean_daily_mg_C[selected] ./ reference,
+                   .-profile.depths[selected]; color, linewidth = 2.5, label = station)
+        end
+    end
+    axislegend(attenuation; position = :rt, framevisible = false)
+
+    deep_export = Axis(figure[2, 2]; title = "Cumulative POC export at 1000 m",
+                       xlabel = "Day", ylabel = "g C m⁻²")
+    lines!(deep_export, bats.day, bats.export_1000.cumulative_g_C;
+           color = blue, linewidth = 2.5, label = "BATS")
+    lines!(deep_export, nabe.day, nabe.export_1000.cumulative_g_C;
+           color = orange, linewidth = 2.5, label = "NABE")
+    axislegend(deep_export; position = :lt, framevisible = false)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+end # module MASTSWorkshopMakieExt

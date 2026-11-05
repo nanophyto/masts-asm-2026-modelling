@@ -134,3 +134,19 @@ DOCS_REUSE_RESULTS=true julia --project=docs docs/make.jl
 ```
 
 This uses the figures and diagnostics under `outputs/oceanbiome/reference_docs/`.
+
+## Idealised Atlantic comparison
+
+`MASTSWorkshop.column(:NABE)` builds a North Atlantic bloom-region column on a
+stretched 1200 m grid; `column(:BATS; deep=true)` uses the identical grid with
+subtropical idealised physics. The original `column(:BATS)` remains a 500 m
+uniform reference for the established exercises. Run the paired reference:
+
+```bash
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/07_bats_nabe.jl
+```
+
+Both columns use a 30-minute timestep and export diagnostics at 100, 300,
+and 1000 m. `MASTS_COMPARISON_DAYS=2` selects a two-day functional check.
+The station nitrate profiles and seasonal forcings are initial hypotheses;
+the next development stage compares them against measured station climatologies.
