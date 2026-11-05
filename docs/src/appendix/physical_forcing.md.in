@@ -143,24 +143,40 @@ and the deeper nutrient reservoir.
 
 ### Offline 1D mixing from NumericalEarth
 
-An instructor-side prototype generates BATS and NABE physical columns using
-[NumericalEarth's published single-column setup](https://numericalearth.github.io/NumericalEarthDocumentation/stable/literated/single_column_os_papa_simulation/)
-and its **CATKE** turbulence closure. Both physical columns use EN4 initial
-hydrography, JRA55 atmospheric forcing, and the shared 1200 m stretched grid.
-The saved Oceananigans JLD2 outputs contain **tracer diffusivity at vertical
-faces**, temperature, and salinity. A separate 1D LOBSTER model can read the
-saved diffusivity using the `offline_physics` option:
+The instructor-side physical workflow evolves BATS and NABE 1200 m columns
+using [NumericalEarth's single-column setup](https://numericalearth.github.io/NumericalEarthDocumentation/stable/literated/single_column_os_papa_simulation/)
+and CATKE. Temperature and salinity start from EN4, and the column experiences
+an annually repeated, full-year 1990 JRA55 atmospheric cycle.
+
+The recommended initial validation runs **365 days of physical spin-up**, then
+saves the following **365 days** of native Oceananigans face diffusivity,
+temperature and salinity. A daily diagnostic file from the preceding year
+permits an interannual comparison. The biologically active field is only
+vertical tracer diffusivity; surface PAR continues to use the NASA POWER fit.
+
+```bash
+julia --threads=1 --project=physics physics/generate_column.jl BATS 365 365
+julia --threads=1 --project=physics physics/generate_column.jl NABE 365 365
+julia --threads=1 --project=oceanbiome physics/validate_seasonal_physics.jl BATS outputs/physics/bats_catke_spin365d_365d.jld2
+```
+
+The physical validation compares consecutive years of **mixed-layer depth,
+temperature and salinity** and the resulting seasonal MLD with NOAA GOSML.
+The MLD diagnostic is the published 10 m reference / 0.2 °C temperature
+criterion. Since a physical column lacks lateral water exchange, any drift
+in temperature and salinity is assessed before choosing an annual forcing.
+
+To use the saved second year in the existing biological column:
 
 ```julia
 config = MASTSWorkshop.column(:BATS; deep = true,
-    offline_physics = "outputs/physics/bats_catke_365d.jld2")
+    offline_physics = "outputs/physics/bats_catke_spin365d_365d.jld2")
 ```
 
-Run `physics/generate_column.jl` in its independent Julia environment to
-produce the physical files. The reference workshop exercises continue to use
-their idealised diffusivity while this alternative is assessed against GOSML
-mixed-layer depths and the original depth–time mixing plots. The calibrated
-NASA POWER light forcing remains unchanged in the biological simulations.
+`load_offline_physics` maps the saved post-spin-up timestamps to elapsed
+0–365 day biological time. The default idealised column remains available for
+comparison while CATKE is being evaluated. Further instructions are in
+`physics/README.md`.
 
 ### Scientific sources and next validation
 

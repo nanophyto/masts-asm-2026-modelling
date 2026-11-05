@@ -12,7 +12,7 @@ export OfflineColumnForcing, OfflineDiffusivity, load_offline_physics,
 
 In-memory, one-dimensional snapshots from NumericalEarth's JLD2Writer:
 `κc` is sampled at vertical faces (m²/s), `T` at cell centres (°C).
-Times are elapsed seconds, with no implicit periodic repetition.
+Times are seconds elapsed since the first saved snapshot, with no implicit periodic repetition.
 """
 struct OfflineColumnForcing
     faces::Vector{Float64}
@@ -46,11 +46,14 @@ function load_offline_physics(path::AbstractString)
     t = collect(κc.times)
     length(T.times) == length(t) && all(T.times .== t) ||
         throw(ArgumentError("κc and T have different output times"))
+    # Physical spin-up continues on the same clock. A file covering days
+    # 365-730 must drive the offline biology at days 0-365.
+    elapsed = Float64.(t) .- first(t)
     faces = collect(znodes(κc.grid, Face()))
     centres = collect(znodes(T.grid, Center()))
     κ = hcat((collect(interior(κc[i], 1, 1, :)) for i in eachindex(t))...)
     temp = hcat((collect(interior(T[i], 1, 1, :)) for i in eachindex(t))...)
-    return OfflineColumnForcing(faces, centres, t, κ, temp)
+    return OfflineColumnForcing(faces, centres, elapsed, κ, temp)
 end
 
 # Piecewise-linear interpolation in z and time: this transports the Kz
