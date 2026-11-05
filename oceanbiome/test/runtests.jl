@@ -14,7 +14,7 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     @test Base.pkgversion(Oceananigans) == v"0.114.1"
     @test only(p.version for p in values(Pkg.dependencies()) if p.name == "CairoMakie") == v"0.15.16"
     @test Meta.parseall(read(joinpath(@__DIR__, "..", "ext", "MASTSWorkshopMakieExt.jl"), String)) isa Expr
-    for name in ("generate_column.jl", "test_offline_biology.jl", "plot_diffusivity.jl")
+    for name in ("generate_column.jl", "test_offline_biology.jl", "plot_diffusivity.jl", "plot_velocity_diagnostics.jl", "fit_smooth_diffusivity.jl", "smooth_diffusivity_fit.jl")
         @test Meta.parseall(read(joinpath(@__DIR__, "..", "..", "physics", name), String)) isa Expr
     end
     @test hasmethod(MASTSWorkshop.analyse_column_output, Tuple{String, Any})
@@ -33,6 +33,7 @@ using Oceananigans.Units
 include("mld_comparison_tests.jl")
 include("par_comparison_tests.jl")
 include("offline_physics_tests.jl")
+include(joinpath(@__DIR__, "..", "..", "physics", "test_smooth_diffusivity_fit.jl"))
 include("plot_preview.jl")
 
 @testset "Idealised physical forcing" begin

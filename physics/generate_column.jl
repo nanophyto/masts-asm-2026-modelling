@@ -82,6 +82,7 @@ function generate(station::Symbol, output_days::Int;
                             stop_time = (spinup_days + output_days) * days)
 
     T, S = ocean.model.tracers.T, ocean.model.tracers.S
+    u, v = ocean.model.velocities.u, ocean.model.velocities.v
     κc = ocean.model.closure_fields.κc  # tracer Kz at vertical cell faces
     root = normpath(joinpath(@__DIR__, ".."))
     directory = get(ENV, "MASTS_PHYSICS_OUTPUT_DIR", joinpath(root, "outputs", "physics"))
@@ -94,7 +95,7 @@ function generate(station::Symbol, output_days::Int;
     # if SpecifiedTimes begins later, so attaching it earlier would include an
     # unwanted unspun-up snapshot. For no-spin-up smoke tests, register now.
     function attach_primary_writer!()
-        writer = JLD2Writer(ocean.model, (; κc, T, S);
+        writer = JLD2Writer(ocean.model, (; κc, T, S, u, v);
                              filename = filebase,
                              schedule = SpecifiedTimes(save_at),
                              overwrite_files = true)
@@ -114,7 +115,7 @@ function generate(station::Symbol, output_days::Int;
     # following year possible without storing full subdaily spin-up history.
     if spinup_days >= 365
         spinup_daily = collect(((spinup_days - 365) * days):days:(spinup_days * days))
-        ocean.output_writers[:spinup_diagnostics] = JLD2Writer(ocean.model, (; κc, T, S);
+        ocean.output_writers[:spinup_diagnostics] = JLD2Writer(ocean.model, (; κc, T, S, u, v);
                                    filename = filebase * "_spinup_daily",
                                    schedule = SpecifiedTimes(spinup_daily),
                                    overwrite_files = true)
@@ -144,7 +145,7 @@ function generate(station::Symbol, output_days::Int;
         println(io, "repetition_period_days = 365")
         println(io, "turbulence_closure = NumericalEarth ocean_simulation CATKE")
         println(io, "vertical_grid = 60 stretched cells; 1200 m")
-        println(io, "saved_fields = κc, T, S")
+        println(io, "saved_fields = κc, T, S, u, v")
         println(io, "spinup_days = $spinup_days")
         println(io, "output_days = $output_days")
         println(io, "output_hours = $output_hours")

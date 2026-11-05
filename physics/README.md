@@ -68,8 +68,9 @@ outputs/physics/
 The primary file contains **only the second year** (days 365–730), including
 both endpoints at 3-hour intervals. The small companion file saves daily
 snapshots from the last spin-up year (days 0–365), enabling a same-season
-comparison. Both contain `κc` at faces and temperature/salinity at centres;
-no velocities are written.
+comparison. Both now contain `κc` at faces, temperature/salinity at centres,
+and horizontal velocities `u` and `v`. Vertical velocity `w` is not saved
+because the 1D offline column uses `w = 0` by construction.
 
 The native JLD2 timestamps retain the continuous physical clock.
 `MASTSWorkshop.load_offline_physics` subtracts the **first saved time**, so
@@ -114,7 +115,67 @@ The existing two-day mixing comparison is also available for the annual files:
 julia --threads=1 --project=oceanbiome physics/plot_diffusivity.jl BATS outputs/physics/bats_catke_spin365d_365d.jld2
 ```
 
-## 5. Run offline biology
+For the additional depth–time velocity diagnostics discussed during validation, run:
+
+```bash
+julia --threads=1 --project=oceanbiome physics/plot_velocity_diagnostics.jl BATS outputs/physics/bats_catke_spin365d_365d.jld2
+julia --threads=1 --project=oceanbiome physics/plot_velocity_diagnostics.jl NABE outputs/physics/nabe_catke_spin365d_365d.jld2
+```
+
+This produces a four-panel figure with `u`, `v`, vertical shear magnitude, and `κc`, each overlaid with the temperature-derived mixed-layer depth. These physics diagnostics help interpret when CATKE mixing is driven by velocity shear rather than simply comparing `Kz` against the previous idealised closure.
+
+## 5. Derive a smooth, two-layer seasonal forcing from CATKE
+
+Fit the saved year of temperature and face diffusivity directly. This takes
+seconds to minutes and reuses the existing physical files; no new physics run
+or atmospheric downloads are required.
+
+```bash
+julia --threads=1 --project=oceanbiome physics/fit_smooth_diffusivity.jl BATS outputs/physics/bats_catke_spin365d_365d.jld2
+julia --threads=1 --project=oceanbiome physics/fit_smooth_diffusivity.jl NABE outputs/physics/nabe_catke_spin365d_365d.jld2
+```
+
+Each command writes a `*_smooth.toml` fit plus a
+`*_smooth_comparison.png` containing (1) CATKE Kz, (2) binary two-layer Kz,
+(3) the signed difference in log10(Kz), and (4) **diffusivity-defined mixing
+depth** alongside the temperature-defined MLD for context.
+
+The fitted interface is based directly on CATKE Kz, rather than on a
+hydrographic MLD definition: take the daily-median cell-centred Kz profile;
+find the first downward crossing of the midpoint *in log Kz* between the
+upper 25 m and the background below 500 m; fit the resulting daily mixing
+depths with two annual harmonics. The surface boundary face is excluded from
+the depth diagnostic. This is a mixing-depth proxy for the two-layer forcing,
+not an observational mixed-layer-depth estimate.
+
+**Upper-layer Kz** is a time- and thickness-weighted **median** between 20 m
+and 15 m above the fitted mixing depth. **Deep Kz** is a time- and
+thickness-weighted **median** from 15 m below the mixing depth down to 300 m.
+This avoids allowing rare mixing bursts near the surface or the weak abyssal
+background to determine the two representative values. The diffusivity is
+**strictly binary**: upper value above the smooth moving boundary and deep
+value below it, with no intermediate values. The `.toml` records the method,
+source file, station, coefficients and both diffusivities (`fit_version = 2`).
+
+Use a fit for a shallow or deep **1D OceanBioME column**:
+
+```julia
+using MASTSWorkshop
+config = column(:BATS; deep = true,
+    smooth_physics = "outputs/physics/bats_catke_spin365d_365d_smooth.toml")
+```
+
+This requires only the compact TOML fit at run time, retains the existing
+light/initial biology, and repeats the smooth mixing seasonally. The raw
+CATKE `.jld2` forcing remains available through `offline_physics`, and the
+original idealised physics remains the default.
+
+The fit is intentionally a compact seasonal approximation. Short-lived
+mixing events remain visible in the comparison but the two medians represent
+typical mixing conditions. After applying this update, rerun both fitting
+commands to regenerate the version 2 TOML files for the binary formulation.
+
+## 6. Run offline biology
 
 ```bash
 julia --threads=1 --project=oceanbiome physics/test_offline_biology.jl BATS outputs/physics/bats_catke_spin365d_365d.jld2

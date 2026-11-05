@@ -5,6 +5,7 @@ include("column_diagnostics.jl")
 include("mld_comparison.jl")
 include("par_comparison.jl")
 include("offline_physics.jl")
+include("smooth_physics.jl")
 
 using .IdealisedPhysics: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions, par_calibrated,
                          nabe_surface_PAR, nabe_mixed_layer_depth, nabe_vertical_diffusivity,
@@ -12,6 +13,7 @@ using .IdealisedPhysics: surface_PAR, mixed_layer_depth, vertical_diffusivity, i
 using .MLDComparison: read_gosml_mld, compare_mld_climatology, write_mld_summary
 using .PARComparison: read_power_par, compare_par_climatology, write_par_summary
 using .OfflinePhysics: OfflineColumnForcing, OfflineDiffusivity, load_offline_physics, offline_diffusivity, offline_temperature
+using .SmoothPhysics: SmoothDiffusivity, load_smooth_physics, smooth_mixed_layer_depth
 include("column_configuration.jl")
 
 using .ColumnDiagnostics: face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
@@ -23,6 +25,7 @@ using .ColumnDiagnostics: face_index, sinking_courant, downward_nitrogen_flux, c
 
 export column, results_directory, deep_grid_faces,
        OfflineColumnForcing, load_offline_physics, offline_diffusivity, offline_temperature,
+       SmoothDiffusivity, load_smooth_physics, smooth_mixed_layer_depth,
        surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions, par_calibrated,
        nabe_surface_PAR, nabe_mixed_layer_depth, nabe_vertical_diffusivity,
        nabe_initial_conditions, deep_bats_initial_conditions,
