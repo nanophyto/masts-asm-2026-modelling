@@ -17,8 +17,9 @@ WORKSHOP_PHYSICS_FIGURE
 
 The figure shows three related physical inputs:
 
-- **Surface PAR:** An idealised annual cycle, with a winter minimum and
-  stronger illumination toward midsummer. The prescribed value is in W m⁻².
+- **Surface PAR:** A smooth, positive annual cycle calibrated to NASA POWER's
+  2001–2020 satellite-derived climatological daily-mean PAR at each station
+  (W m⁻²). It has a winter minimum and stronger illumination in summer.
 - **Mixed-layer depth:** A smooth, GOSML-informed seasonal transition from
   a roughly 95 m late-winter mixed layer toward a roughly 15 m summer layer.
 - **Vertical diffusivity:** Stronger mixing above the mixed-layer base and
@@ -42,7 +43,7 @@ production exercises at BATS and NABE both use 300 m / 30-cell columns. Their `d
 | Location represented | 31.7 N, 64.2 W | ~47 N, 20 W |
 | Late-winter maximum mixed-layer depth | ~95 m | ~190 m (February) |
 | Summer minimum mixed-layer depth | ~15 m | ~20 m |
-| Surface PAR | 2-122 W/m2 | 2-98 W/m2 |
+| Surface PAR | NASA POWER-informed periodic daily mean | NASA POWER-informed periodic daily mean |
 | Spring mixed-layer transition | Gradual shoaling March–May | Faster shoaling March–May |
 | Initial near-surface nitrate | ~0.7 mmol N/m3 | ~6.0 mmol N/m3 |
 | Vertical diffusivity, surface mixed layer | up to ~5.1e-3 m2/s | up to ~1.01e-2 m2/s |
@@ -59,6 +60,33 @@ mixed-layer depths; the horizontal dotted line indicates the 300 m teaching
 domain. Below the mixed layer the background diffusivity is approximately
 10⁻⁴ m² s⁻¹. NABE now peaks near 190 m in late winter, compared with
 roughly 95 m at BATS; its seasonal shoaling remains more pronounced.
+
+### Observational surface PAR: NASA POWER / CERES
+
+WORKSHOP_POWER_PAR_COMPARISON_FIGURE
+
+NASA POWER's `ALLSKY_SFC_PAR_TOT` provides the all-sky (direct plus diffuse)
+photosynthetically active radiation incident at the surface. The **Sustainable
+Buildings** data response is checked for its reported units and converted to
+24-hour mean W m⁻². The plotted climatology is for **2001–2020** at BATS
+(31.67°N, 64.17°W) and NABE (47°N, 20°W). It is a satellite-derived,
+spatially gridded estimate rather than a shipboard PAR measurement.
+
+Only the 12 monthly mean points are plotted over the smooth, continuously
+periodic **idealised daily-mean PAR** forcing. The coefficients are generated
+from the observations by a two-harmonic least-squares fit in log(PAR), so the
+forcing remains positive throughout the year. The full build verifies the
+CSV and generated Julia coefficients share an identical provenance hash.
+
+WORKSHOP_POWER_PAR_SUMMARY_TABLE
+
+The diagnostics evaluate the prescribed forcing at each calendar month's
+daily means. **Winter means December–February** and the summary reports annual
+mean, bias, RMSE and winter light levels. The OceanBioME column applies a
+continuous daily-mean forcing, so the comparison uses 24-hour mean energy
+fluxes rather than instantaneous midday PAR. Rebuilding the full scientific
+reference after any PAR change captures its influence on primary production,
+bloom timing and carbon export.
 
 ### Observational mixed-layer depth: NOAA GOSML
 
@@ -112,6 +140,27 @@ vertical inventories use the physical thickness of each cell. The revised
 idealised winter mixed layers remain within the 300 m teaching domain at
 both stations. The deep simulation resolves export below the mixed layer
 and the deeper nutrient reservoir.
+
+### Offline 1D mixing from NumericalEarth
+
+An instructor-side prototype generates BATS and NABE physical columns using
+[NumericalEarth's published single-column setup](https://numericalearth.github.io/NumericalEarthDocumentation/stable/literated/single_column_os_papa_simulation/)
+and its **CATKE** turbulence closure. Both physical columns use EN4 initial
+hydrography, JRA55 atmospheric forcing, and the shared 1200 m stretched grid.
+The saved Oceananigans JLD2 outputs contain **tracer diffusivity at vertical
+faces**, temperature, and salinity. A separate 1D LOBSTER model can read the
+saved diffusivity using the `offline_physics` option:
+
+```julia
+config = MASTSWorkshop.column(:BATS; deep = true,
+    offline_physics = "outputs/physics/bats_catke_365d.jld2")
+```
+
+Run `physics/generate_column.jl` in its independent Julia environment to
+produce the physical files. The reference workshop exercises continue to use
+their idealised diffusivity while this alternative is assessed against GOSML
+mixed-layer depths and the original depth–time mixing plots. The calibrated
+NASA POWER light forcing remains unchanged in the biological simulations.
 
 ### Scientific sources and next validation
 

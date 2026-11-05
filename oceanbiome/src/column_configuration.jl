@@ -16,17 +16,20 @@ function deep_grid_faces()
 end
 
 """
-    column(:BATS; deep=false)
-    column(:NABE; deep=false)
+    column(:BATS; deep=false, offline_physics=nothing)
+    column(:NABE; deep=false, offline_physics=nothing)
 
 Return `(grid, time_step, initial, closure, surface_PAR)` for the native
 OceanBioME `LOBSTER` and Oceananigans `NonhydrostaticModel` constructors.
 Both stations use a 300 m / 30-cell teaching column by default, or the same
 1200 m / 60-cell stretched grid when `deep=true`. Their biological parameters
 are shared; idealised seasonal light, mixing, and nitrate differ by station.
-The annual cycle starts at midwinter (`t = 0`).
+The annual cycle starts at midwinter (`t = 0`). Pass `offline_physics` as a
+NumericalEarth CATKE JLD2 filename (or a loaded `OfflineColumnForcing`) to
+replace idealised mixing with time-dependent, face-based diffusivity. The
+existing initial nutrient profiles and PAR are retained.
 """
-function column(station::Symbol; deep::Bool = false)
+function column(station::Symbol; deep::Bool = false, offline_physics = nothing)
     station in (:BATS, :NABE) ||
         throw(ArgumentError("No prepared column for $station (available: :BATS, :NABE)"))
 
@@ -40,11 +43,16 @@ function column(station::Symbol; deep::Bool = false)
     end
 
     light = station === :BATS ? surface_PAR : nabe_surface_PAR
-    mixing = station === :BATS ? vertical_diffusivity : nabe_vertical_diffusivity
+    physical = offline_physics isa AbstractString ? load_offline_physics(offline_physics) : offline_physics
+    isnothing(physical) || physical isa OfflineColumnForcing ||
+        throw(ArgumentError("offline_physics must be a filename or OfflineColumnForcing"))
+    mixing = isnothing(physical) ?
+             (station === :BATS ? vertical_diffusivity : nabe_vertical_diffusivity) :
+             OfflineDiffusivity(physical)
     initial = station === :NABE ? nabe_initial_conditions() : deep_bats_initial_conditions()
     time_step = 30minutes
     closure = ScalarDiffusivity(VerticallyImplicitTimeDiscretization();
-                                ν = mixing, κ = mixing)
+                                ν = isnothing(physical) ? mixing : 0, κ = mixing)
     return (; grid, time_step, initial, closure, surface_PAR = light)
 end
 

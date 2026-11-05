@@ -1,4 +1,4 @@
-using Pkg
+using Pkg, SHA
 Pkg.instantiate()
 using Documenter, Literate
 
@@ -24,6 +24,22 @@ gosml_csv = joinpath(root, "data", "observations", "gosml_mld_bats_nabe.csv")
 if !quick && !content_only && !isfile(gosml_csv)
     error("Missing $gosml_csv. Generate and commit the observational reference with " *
           "`conda run -n masts-gosml python scripts/prepare_mld_climatology.py` before building docs.")
+end
+
+# The scientific light forcing is generated from NASA POWER's 2001-2020
+# point climatologies. Verify the committed observations and coefficients match
+# before spending minutes regenerating annual biology (including in CI).
+par_csv = joinpath(root, "data", "observations", "nasa_power_par_bats_nabe.csv")
+par_coefficients = joinpath(root, "oceanbiome", "src", "par_forcing_coefficients.jl")
+if !quick && !content_only
+    isfile(par_csv) || error("Missing $par_csv. Run " *
+        "`conda run -n masts-gosml python scripts/prepare_par_climatology.py` and commit its outputs.")
+    coefficients = read(par_coefficients, String)
+    occursin("const PAR_COEFFICIENT_ORIGIN = \"NASA POWER 2001-2020\"", coefficients) ||
+        error("NASA POWER PAR calibration is pending. Run scripts/prepare_par_climatology.py.")
+    checksum = bytes2hex(sha256(read(par_csv)))
+    occursin("const PAR_CSV_SHA256 = \"$checksum\"", coefficients) ||
+        error("NASA POWER PAR CSV and generated coefficients differ. Rerun data preparation.")
 end
 
 function run_exercise(name, output_dir)
@@ -108,7 +124,7 @@ station_output = (quick || reuse_results || content_only) ? nothing :
 # biological outputs are being reused. A full build also re-runs the ecosystem
 # under the revised MLD curves.
 if reuse_results && !content_only
-    @warn "DOCS_REUSE_RESULTS reuses annual ecosystem outputs; run a full build after changing MLD forcing to update the biology figures."
+    @warn "DOCS_REUSE_RESULTS reuses annual ecosystem outputs; run a full build after changing MLD or PAR forcing to update biology figures."
     mkpath(station_dir)
     code = "using MASTSWorkshop, CairoMakie; " *
            "MASTSWorkshop.plot_station_forcing(ARGS[1]; preview=false); " *
@@ -128,6 +144,18 @@ if !quick && !content_only
     run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $gosml_csv $mld_png $mld_summary`)
     check_png(mld_png)
     cp(mld_summary, joinpath(assets_dir, "gosml_mld_summary.md"); force = true)
+end
+
+# Satellite-derived PAR reference: regenerate from the checked-in monthly
+# climatology on every full docs build, including DOCS_REUSE_RESULTS=true.
+par_png = joinpath(station_dir, "nasa_power_par_comparison.png")
+par_summary = joinpath(station_dir, "nasa_power_par_summary.md")
+if !quick && !content_only
+    mkpath(station_dir)
+    script = joinpath(root, "scripts", "plot_par_comparison.jl")
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $par_csv $par_png $par_summary`)
+    check_png(par_png)
+    cp(par_summary, joinpath(assets_dir, "nasa_power_par_summary.md"); force = true)
 end
 
 # The physics diagram belongs to the appendix; the reference exercise
@@ -155,7 +183,8 @@ parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(k
 station_figures = ((station_dir, "station_forcing.png"),
                    (station_dir, "station_diffusivity.png"),
                    (station_dir, "station_comparison.png"),
-                   (station_dir, "gosml_mld_comparison.png"))
+                   (station_dir, "gosml_mld_comparison.png"),
+                   (station_dir, "nasa_power_par_comparison.png"))
 if !content_only
     for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
         check_png(joinpath(directory, filename))
@@ -270,6 +299,9 @@ make_tutorial("07_bats_nabe.jl", (
     "WORKSHOP_GOSML_COMPARISON_FIGURE" =>
         figure_block("gosml_mld_comparison.png", "Observed GOSML versus idealised mixed-layer depth at BATS and NABE"),
     "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md"),
+    "WORKSHOP_POWER_PAR_COMPARISON_FIGURE" =>
+        figure_block("nasa_power_par_comparison.png", "NASA POWER surface-PAR climatology versus idealised BATS and NABE forcing"),
+    "WORKSHOP_POWER_PAR_SUMMARY_TABLE" => asset_text("nasa_power_par_summary.md"),
 ))
 
 # The appendix is a template: Documenter should process only its generated
@@ -280,7 +312,9 @@ write(joinpath(generated_dir, "physical_forcing.md"),
               "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity"),
               "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" => figure_block("station_diffusivity.png", "Depth-time mixing at BATS and NABE"),
               "WORKSHOP_GOSML_COMPARISON_FIGURE" => figure_block("gosml_mld_comparison.png", "GOSML mixed-layer climatology versus prescribed BATS and NABE forcing"),
-              "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md")))
+              "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md"),
+              "WORKSHOP_POWER_PAR_COMPARISON_FIGURE" => figure_block("nasa_power_par_comparison.png", "NASA POWER surface-PAR climatology versus BATS and NABE forcing"),
+              "WORKSHOP_POWER_PAR_SUMMARY_TABLE" => asset_text("nasa_power_par_summary.md")))
 
 makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",

@@ -14,6 +14,9 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     @test Base.pkgversion(Oceananigans) == v"0.114.1"
     @test only(p.version for p in values(Pkg.dependencies()) if p.name == "CairoMakie") == v"0.15.16"
     @test Meta.parseall(read(joinpath(@__DIR__, "..", "ext", "MASTSWorkshopMakieExt.jl"), String)) isa Expr
+    for name in ("generate_column.jl", "test_offline_biology.jl", "plot_diffusivity.jl")
+        @test Meta.parseall(read(joinpath(@__DIR__, "..", "..", "physics", name), String)) isa Expr
+    end
     @test hasmethod(MASTSWorkshop.analyse_column_output, Tuple{String, Any})
     for name in ("02_sinking.jl", "03_remineralisation.jl", "04_light_affinity.jl",
                  "05_nutrient_affinity.jl", "06_phytoplankton_mortality.jl",
@@ -28,11 +31,14 @@ using Oceananigans.Grids: znodes
 using Oceananigans.Units
 
 include("mld_comparison_tests.jl")
+include("par_comparison_tests.jl")
+include("offline_physics_tests.jl")
 include("plot_preview.jl")
 
 @testset "Idealised physical forcing" begin
     @test surface_PAR(0, 0, 180days) > surface_PAR(0, 0, 0)
     @test surface_PAR(180days) == surface_PAR(0, 0, 180days)
+    @test MASTSWorkshop.par_calibrated() isa Bool
     @test mixed_layer_depth(0) < mixed_layer_depth(180days)
     @test vertical_diffusivity(-5, 0) > vertical_diffusivity(-190, 0)
     @test vertical_diffusivity(-5, 0) == vertical_diffusivity(0, 0, -5, 0)
@@ -44,7 +50,8 @@ include("plot_preview.jl")
         @test mixed_layer_depth(station, 180days) == mld(180days)
         @test vertical_diffusivity(station, -5, 180days) == mixing(-5, 180days)
         for time in (0, 45, 90, 135, 180, 225, 270, 315) .* days
-            @test isfinite(surface_PAR(station, time)) && surface_PAR(station, time) >= 0
+            @test isfinite(surface_PAR(station, time)) && surface_PAR(station, time) > 0
+            @test surface_PAR(station, time) ≈ surface_PAR(station, time + 365days)
             @test -1200 < mixed_layer_depth(station, time) < 0
             @test isfinite(vertical_diffusivity(station, -5, time)) &&
                   vertical_diffusivity(station, -5, time) > 0

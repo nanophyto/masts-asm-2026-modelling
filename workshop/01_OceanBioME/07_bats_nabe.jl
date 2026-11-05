@@ -67,6 +67,22 @@ println("Saved $diffusivity_figure")
 
 #md # WORKSHOP_GOSML_SUMMARY_TABLE
 
+# ## Does the prescribed light follow satellite-derived PAR?
+#
+# NASA POWER's CERES-derived 2001–2020 monthly all-sky surface PAR (24-hour
+# mean W/m²) provides an independent check on the idealised BATS/NABE light
+# curves. Blue points are monthly climatological means and the red lines are
+# smooth, positive, annually periodic forcing fitted to those same observations.
+# The reported monthly bias and RMSE use monthly averages of daily model PAR,
+# not noon irradiance. PAR data and coefficients are prepared in the isolated
+# masts-gosml Conda environment and committed for reproducible docs builds.
+
+#md # WORKSHOP_POWER_PAR_COMPARISON_FIGURE
+
+#md # WORKSHOP_POWER_PAR_SUMMARY_TABLE
+
+
+
 # ## Run a reference ecosystem at each station
 #
 # Each simulation uses the same default LOBSTER biology. The nitrate profiles

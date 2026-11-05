@@ -41,7 +41,7 @@ julia --threads=1 --project=oceanbiome scripts/plot_mld_comparison.jl
 The script calls the existing Julia station-specific `mixed_layer_depth(station, t)`
 functions (no duplicated Python forcing code) and saves:
 
-- `outputs/oceanbiome/mld_comparison/gosml_mld_comparison.png`: side-by-side BATS/NABE observed monthly mean, median and 5th–95th percentiles against the prescribed daily forcing, with positive-down depth and the 300 m domain limit.
+- `outputs/oceanbiome/mld_comparison/gosml_mld_comparison.png`: side-by-side BATS/NABE observed monthly mean points against smooth idealised daily forcing, with negative-down depth and a shared legend.
 - `outputs/oceanbiome/mld_comparison/gosml_mld_summary.md`: calendar-month means, annual mean, winter maximum, monthly mean bias and RMSE. Model-minus-observed bias is positive when prescribed mixing is deeper.
 
 Full documentation builds regenerate the figure and summary from the checked-in CSV, including when `DOCS_REUSE_RESULTS=true`. No NetCDF download or Conda execution occurs during a documentation build.
@@ -63,3 +63,45 @@ Tests generate tiny synthetic NetCDF files and never download data. They check m
 ## Scope
 
 PR2A provides verified observational extraction and provenance; PR2B/2C provide the model comparison, quantitative evaluation and automatically regenerated documentation figure. A separate pilot cycle can use the observed curve to assess whether physical parameter adjustments improve seasonal timing and biology.
+
+## NASA POWER surface PAR (PR2 supplementary validation)
+
+The PAR preparation uses the **same isolated Conda environment** as the GOSML
+preparation; do not install Python dependencies in the base environment.
+
+```bash
+conda env create -f scripts/gosml-environment.yml  # once; skip if it exists
+conda run -n masts-gosml python -m unittest discover -s scripts -p 'test_prepare_par_climatology.py' -v
+conda run -n masts-gosml python scripts/prepare_par_climatology.py
+```
+
+The [NASA POWER Climatology API](https://power.larc.nasa.gov/docs/services/api/temporal/climatology/)
+serves `ALLSKY_SFC_PAR_TOT`, all-sky surface photosynthetically active radiation.
+The script requests the **Sustainable Buildings (`SB`) community**, period
+**2001–2020**, at BATS (31.67°N, 64.17°W) and NABE (47°N, 20°W). It reads
+NASA's reported unit metadata and converts, where needed, to **24-hour mean
+W m⁻²**. The source is CERES satellite-derived all-sky surface radiation, not
+in-situ measurements. The 12 monthly means describe the climatology, not
+an uncertainty envelope. Raw NASA JSON is cached in `data/observations/raw/`
+(ignored by Git); `--offline` reuses that cache, `--refresh` redownloads it.
+
+The preparation writes three **version-controlled outputs**:
+
+- `data/observations/nasa_power_par_bats_nabe.csv` — 24 monthly station means
+  (`station,month,latitude,longitude,par_w_m2`).
+- `data/observations/nasa_power_par_bats_nabe.metadata.json` — request URLs,
+  source JSON SHA-256, collection period, declared units and fitted errors.
+- `oceanbiome/src/par_forcing_coefficients.jl` — two-harmonic log(PAR) fit
+  coefficients, including SHA-256 of the observation CSV.
+
+The latest package starts with the explicitly labelled old idealised forcing
+until the preparation runs. The full documentation build checks that the
+committed CSV matches the calibrated Julia coefficients; it then regenerates
+the BATS/NABE satellite-PAR figure and summary automatically. The exact
+observations are never replaced by synthetic values. A full scientific docs
+build also reruns annual LOBSTER simulations with the new forcing.
+
+```bash
+julia --threads=1 --project=oceanbiome scripts/plot_par_comparison.jl
+julia --threads=1 --project=docs docs/make.jl
+```

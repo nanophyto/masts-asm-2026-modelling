@@ -57,6 +57,11 @@ using CairoMakie
                 @test isfile(filename) && filesize(filename) > 1000
             end
         end
+        par_csv = write_par_fixture(joinpath(dir, "par_fixture.csv"))
+        par_comparison = MASTSWorkshop.compare_par_climatology(par_csv)
+        par_png = joinpath(dir, "nasa_power_par_comparison.png")
+        @test MASTSWorkshop.plot_par_comparison(par_comparison, par_png; preview = false) == par_png
+        @test isfile(par_png) && filesize(par_png) > 1000
         csv = write_mld_fixture(joinpath(dir, "gosml_fixture.csv"))
         comparison = MASTSWorkshop.compare_mld_climatology(csv)
         filename = joinpath(dir, "gosml_mld_comparison.png")

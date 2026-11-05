@@ -122,3 +122,19 @@ the [grazing experiment](generated/01_grazing.md),
 [nutrient affinity](generated/05_nutrient_affinity.md),
 [phytoplankton mortality](generated/06_phytoplankton_mortality.md), or the
 [physical-forcing appendix](generated/physical_forcing.md).
+
+## Preparing the BATS/NABE observational references
+
+The full documentation build compares GOSML mixed-layer depth and NASA POWER
+surface PAR at BATS and NABE. Generate both committed observational references
+using the isolated `masts-gosml` Conda environment:
+
+```bash
+conda env create -f scripts/gosml-environment.yml
+conda run -n masts-gosml python scripts/prepare_mld_climatology.py
+conda run -n masts-gosml python scripts/prepare_par_climatology.py
+```
+
+The PAR script also updates the compiled Julia forcing coefficients. Commit the
+small CSV/JSON references and generated coefficient file to make builds
+reproducible on GitHub Actions and workshop workstations.

@@ -457,6 +457,44 @@ function MASTSWorkshop.plot_mld_comparison(comparison, filename::AbstractString;
     return filename
 end
 
+# NASA POWER point climatology: blue observed monthly-mean points and smooth,
+# observationally fitted daily-mean forcing, on a common W/m^2 scale.
+function MASTSWorkshop.plot_par_comparison(comparison, filename::AbstractString;
+                                           preview::Bool = isinteractive())
+    stations = (:BATS, :NABE)
+    maximum_PAR = maximum(max(maximum(getproperty(comparison, station).observed_mean),
+                              maximum(getproperty(comparison, station).model_daily))
+                          for station in stations)
+    limit = max(50.0, 25 * ceil(1.12 * maximum_PAR / 25))
+    figure = Figure(size = (1450, 650), fontsize = 15)
+    Label(figure[0, 1:2], "Observed mean vs idealised surface PAR: BATS and NABE";
+          fontsize = 22, font = :bold)
+    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    legend_entries = nothing
+    for (column, station) in enumerate(stations)
+        data = getproperty(comparison, station)
+        axis = Axis(figure[1, column]; title = string(station), xlabel = "Month",
+                    ylabel = "Daily-mean PAR (W m⁻²)",
+                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4)
+        idealised = lines!(axis, data.month_x, data.model_daily;
+                           color = :orangered, linewidth = 3)
+        observed = scatter!(axis, data.months, data.observed_mean;
+                            color = :royalblue, markersize = 12)
+        isnothing(legend_entries) && (legend_entries = [idealised, observed])
+        xlims!(axis, 0.5, 12.5)
+        ylims!(axis, 0, limit)
+    end
+    Legend(figure[2, 1:2], legend_entries, ["Idealised forcing", "NASA POWER monthly mean"];
+           orientation = :horizontal, framevisible = false, tellwidth = false)
+    Label(figure[3, 1:2],
+          "NASA POWER / CERES (2001–2020): points are observed monthly means; " *
+          "lines are smooth daily-mean forcing."; fontsize = 12)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
 # Compare the two annual ecosystem references on the same deep grid.
 function MASTSWorkshop.plot_station_comparison(bats, nabe, filename::AbstractString;
                                               preview::Bool = isinteractive())

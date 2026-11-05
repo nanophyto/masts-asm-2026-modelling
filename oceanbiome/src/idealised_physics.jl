@@ -2,14 +2,27 @@ module IdealisedPhysics
 
 using Oceananigans.Units: days
 
-export surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
+export surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions, par_calibrated,
        nabe_surface_PAR, nabe_mixed_layer_depth, nabe_vertical_diffusivity,
        nabe_initial_conditions, deep_bats_initial_conditions
 
 const year = 365days
+include("par_forcing_coefficients.jl")
 
-# Idealised Northern Hemisphere annual cycle. t = 0 corresponds to midwinter.
-surface_PAR(t) = 2 + 60 * (1 - cos(2pi * t / year))  # W / m^2
+# NASA POWER 2001-2020 climatological 24-hour-mean surface PAR (W m^-2),
+# fitted in log space with two periodic harmonics for a smooth, positive
+# Oceananigans callback. The preparation script writes the coefficients;
+# the initial version retains the former idealised forcing until extraction.
+@inline function periodic_PAR(t, coefficients)
+    θ = 2pi * t / year
+    a, c1, s1, c2, s2 = coefficients
+    return exp(a + c1 * cos(θ) + s1 * sin(θ) + c2 * cos(2θ) + s2 * sin(2θ))
+end
+par_calibrated() = PAR_COEFFICIENT_ORIGIN == "NASA POWER 2001-2020"
+# The legacy expressions preserve previous reference results until the data
+# extraction has been run. A full docs build requires the calibrated version.
+surface_PAR(t) = par_calibrated() ? periodic_PAR(t, BATS_PAR_LOG_COEFFICIENTS) :
+                 2 + 60 * (1 - cos(2pi * t / year))
 surface_PAR(x, y, t) = surface_PAR(t)
 
 # Smooth, periodic two-harmonic approximations to the GOSML monthly-mean MLD
@@ -47,7 +60,8 @@ initial_conditions() = (
 # Idealised North Atlantic Bloom Experiment (NABE; approximately 47 N, 20 W).
 # t = 0 is midwinter. These curves are tunable teaching assumptions based on
 # the North Atlantic seasonal regime, not a reconstruction of the 1989 cruise.
-nabe_surface_PAR(t) = 2 + 48 * (1 - cos(2pi * t / year))
+nabe_surface_PAR(t) = par_calibrated() ? periodic_PAR(t, NABE_PAR_LOG_COEFFICIENTS) :
+                      2 + 48 * (1 - cos(2pi * t / year))
 nabe_surface_PAR(x, y, t) = nabe_surface_PAR(t)
 
 # NABE: late-winter maximum around 190 m (February), rapid spring

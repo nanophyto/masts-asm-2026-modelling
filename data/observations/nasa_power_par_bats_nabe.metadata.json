@@ -1,0 +1,41 @@
+{
+  "calibration": "Least-squares two-harmonic log(PAR) fit at calendar-month midpoints; periodic and positive",
+  "community": "SB",
+  "csv_sha256": "8c8234225779e8fec637d7403e90ef844c00123e22e6216a5bde365c507cec3b",
+  "dataset": "NASA POWER ALLSKY_SFC_PAR_TOT (CERES all-sky surface PAR)",
+  "end_year": 2020,
+  "fit_metrics": {
+    "BATS": {
+      "fitted_max_w_m2": 133.5403,
+      "fitted_min_w_m2": 50.4677,
+      "monthly_fit_rmse_w_m2": 1.3942,
+      "observed_max_w_m2": 135.88,
+      "observed_min_w_m2": 50.52
+    },
+    "NABE": {
+      "fitted_max_w_m2": 99.8183,
+      "fitted_min_w_m2": 16.7547,
+      "monthly_fit_rmse_w_m2": 1.9966,
+      "observed_max_w_m2": 104.7,
+      "observed_min_w_m2": 15.88
+    }
+  },
+  "monthly_values": "monthly climatological averages, not noon irradiance",
+  "retrieved_at_utc": "2026-11-05T20:02:12.354605+00:00",
+  "source_files": {
+    "BATS": {
+      "cached_file": "data/observations/raw/nasa_power_par_bats.json",
+      "sha256": "0196480e31a4422a19357997ccd1c57f3a5c0acfb9fcfb079ebafe5fbe0bc098",
+      "units_as_reported": "W m-2",
+      "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=ALLSKY_SFC_PAR_TOT&community=SB&longitude=-64.17&latitude=31.67&format=JSON&start=2001&end=2020"
+    },
+    "NABE": {
+      "cached_file": "data/observations/raw/nasa_power_par_nabe.json",
+      "sha256": "5b71a64b3e7342ffc0b1331a6fbde79e9fe27634dd11a49f9c043c27c55982fc",
+      "units_as_reported": "W m-2",
+      "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=ALLSKY_SFC_PAR_TOT&community=SB&longitude=-20.0&latitude=47.0&format=JSON&start=2001&end=2020"
+    }
+  },
+  "start_year": 2001,
+  "units": "W m-2 (24-hour mean irradiance)"
+}
