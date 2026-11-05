@@ -1,0 +1,64 @@
+{
+  "dataset": "NOAA PMEL Global Ocean Surface Mixed Layer Statistical Monthly Climatology (GOSML)",
+  "citation": "Johnson and Lyman (2022), Journal of Geophysical Research: Oceans, doi:10.1029/2021JC018219",
+  "access_date_utc": "2026-11-05",
+  "generated_at_utc": "2026-11-05T13:31:09.518923+00:00",
+  "method": "Nearest ocean grid cell with 12 positive, finite, percentile-consistent MLD values and positive mapping support; no spatial interpolation",
+  "month_encoding": "January=1 through December=12; sorted from NOAA monthly or decimal-month coordinate",
+  "mld_definition": "Holte and Talley (2009) density algorithm on Argo profiles; statistics are spatially/time/bathymetrically weighted (Johnson and Lyman, 2022)",
+  "percentiles": "5th, 50th, 95th describe observed MLD distribution, not uncertainty on the climatological mean",
+  "depth_units": {
+    "depth_mean": "meters",
+    "depth_5": "meters",
+    "depth_50": "meters",
+    "depth_95": "meters"
+  },
+  "selected_grid_cells": {
+    "BATS": {
+      "lat_requested": 31.7,
+      "lon_requested": -64.2,
+      "lat_selected": 31.5,
+      "lon_selected": -64.5,
+      "distance_km": 36.081
+    },
+    "NABE": {
+      "lat_requested": 47.0,
+      "lon_requested": -20.0,
+      "lat_selected": 47.5,
+      "lon_selected": -20.5,
+      "distance_km": 67.196
+    }
+  },
+  "source_files": {
+    "mean": {
+      "filename": "mixed_layer_properties_mean.nc",
+      "url": "https://www.pmel.noaa.gov/gosml/data_files/mixed_layer_properties_mean.nc",
+      "sha256": "eb9a4942cbbdbe1dbf2de6038ab931fded32c4e260392e71b79b1eb8bf67d1ff",
+      "size_bytes": 24919453
+    },
+    "p05": {
+      "filename": "mixed_layer_properties_5.nc",
+      "url": "https://www.pmel.noaa.gov/gosml/data_files/mixed_layer_properties_5.nc",
+      "sha256": "902eda8d61a6ec22877543ca7385851c5c720b465ab9ad4837f4aa6edfe6fb10",
+      "size_bytes": 24919512
+    },
+    "p50": {
+      "filename": "mixed_layer_properties_50.nc",
+      "url": "https://www.pmel.noaa.gov/gosml/data_files/mixed_layer_properties_50.nc",
+      "sha256": "d65721275ffb7283c67abc8cfe9752caa210bb8150bfbec0b078d45abd2a71af",
+      "size_bytes": 24919520
+    },
+    "p95": {
+      "filename": "mixed_layer_properties_95.nc",
+      "url": "https://www.pmel.noaa.gov/gosml/data_files/mixed_layer_properties_95.nc",
+      "sha256": "4b0a02c89f04b8daaa5c0f7145306da972e3f088925580524350120d21069aba",
+      "size_bytes": 24922020
+    },
+    "mapping": {
+      "filename": "mixed_layer_mapping_stats.nc",
+      "url": "https://www.pmel.noaa.gov/gosml/data_files/mixed_layer_mapping_stats.nc",
+      "sha256": "2b632270cdd9f8da0f5cc114b7c180cb0107ea87b9c5831e1a22828e129a8a86",
+      "size_bytes": 24919426
+    }
+  }
+}

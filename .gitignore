@@ -15,3 +15,6 @@ docs/src/generated/
 workshop/02_Abil/BATS_*.png
 workshop/02_Abil/ModelOutput/
 workshop/02_Abil/data/*.csv
+
+# NOAA GOSML raw inputs; source files are downloaded explicitly by scripts/prepare_mld_climatology.py
+data/observations/raw/
