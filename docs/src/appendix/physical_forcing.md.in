@@ -34,8 +34,8 @@ of PAR within the column.
 ## Idealised BATS and NABE comparison
 
 The [BATS-NABE comparison](07_bats_nabe.md) adds a North Atlantic spring-bloom
-scenario and uses the same stretched grid at both stations. The default production exercises at BATS and NABE both use 300 m / 30-cell
-columns. Their `deep=true` alternatives use the shared 1200 m / 60-cell grid.
+scenario and uses the same stretched grid at both stations. The default
+production exercises at BATS and NABE both use 300 m / 30-cell columns. Their `deep=true` alternatives use the shared 1200 m / 60-cell grid.
 
 | Setting | Deep BATS | Idealised NABE |
 |:--|:--|:--|
@@ -47,8 +47,33 @@ columns. Their `deep=true` alternatives use the shared 1200 m / 60-cell grid.
 | Initial near-surface nitrate | ~0.7 mmol N/m3 | ~6.0 mmol N/m3 |
 | Vertical diffusivity, surface mixed layer | up to ~5.1e-3 m2/s | up to ~1.01e-2 m2/s |
 
+### Seasonal mixing through the water column
+
+WORKSHOP_STATION_DIFFUSIVITY_FIGURE
+
+The panels show the prescribed vertical diffusivity at cell centres through
+one idealised year, using a common **logarithmic colour scale** (m² s⁻¹).
+The upper 500 m of the shared 1200 m deep grid is shown, where the seasonal
+mixed layers affect nutrient resupply. White dashed curves mark the prescribed
+mixed-layer depths; the horizontal dotted line indicates the 300 m teaching
+domain. Below the mixed layer the background diffusivity is approximately
+10⁻⁴ m² s⁻¹. NABE's deeper winter mixing and rapid shoaling around day 100
+contrast with BATS's shallower, more gradual seasonal cycle.
+
 These parameters are **first-pass teaching scenarios**, chosen to distinguish
 subtropical conditions and a bloom-forming temperate Atlantic environment.
+The plots labelled "top 10 m" use the uppermost model cell, occupying
+0–10 m with its centre at **5 m depth** (z = −5 m); they show neither a
+surface boundary value nor an upper-100 m average. NABE starts near
+6 mmol N m⁻³ nitrate in this cell, compared with approximately
+0.7 mmol N m⁻³ at BATS. During the first simulated year, deep winter mixing
+can resupply NABE's surface layer from the more nitrate-rich water below.
+The pronounced spring phytoplankton maximum (approximately
+2.2 mmol N m⁻³, or 175 mg C m⁻³ at C:N = 106:16) is a provisional model
+outcome. The first year includes adjustment from the specified initial
+profiles; comparison with observed nutrients and biomass and multi-year
+spin-up tests will determine how representative the bloom is.
+
 The nitrate profiles are depth-dependent but are not yet calibrated against
 station observations. Initial plankton and organic-matter fields also decrease
 with depth to limit artificial deep biological inventories. The annual cycle begins in midwinter.

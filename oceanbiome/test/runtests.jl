@@ -26,6 +26,7 @@ end
 include("plot_preview.jl")
 
 using Oceananigans.Fields: interior
+using Oceananigans.Grids: znodes
 using Oceananigans.Units
 
 @testset "Idealised physical forcing" begin
@@ -49,6 +50,11 @@ using Oceananigans.Units
         end
     end
     @test_throws ArgumentError mixed_layer_depth(:UNKNOWN, 0)
+    @test all(-last(znodes(MASTSWorkshop.column(station; deep).grid, Center())) ≈ 5
+              for station in (:BATS, :NABE), deep in (false, true))
+    @test all(vertical_diffusivity(station, -100, 0) >
+              vertical_diffusivity(station, -100, 180days)
+              for station in (:BATS, :NABE))
 end
 
 @testset "Workshop output directory" begin

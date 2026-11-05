@@ -375,6 +375,44 @@ function MASTSWorkshop.plot_station_forcing(filename::AbstractString; preview::B
     return filename
 end
 
+# Show the full annual cycle of the prescribed vertical diffusivity at both sites.
+# Both plots share the deep grid and colour scale; the upper 500 m is shown
+# because mixing beneath the winter MLD is at the prescribed background level.
+function MASTSWorkshop.plot_station_diffusivity(filename::AbstractString;
+                                                preview::Bool = isinteractive())
+    days_in_year = collect(0:5:365)
+    times = days_in_year .* days
+    grid = MASTSWorkshop.column(:BATS; deep = true).grid
+    z = [depth for depth in znodes(grid, Center()) if depth >= -500]
+
+    figure = Figure(size = (1450, 650), fontsize = 15)
+    Label(figure[0, 1:3], "Idealised vertical mixing: BATS and NABE";
+          fontsize = 22, font = :bold)
+    for (column, station) in enumerate((:BATS, :NABE))
+        axis = Axis(figure[1, column]; title = string(station), xlabel = "Day",
+                    ylabel = "Depth (m)")
+        kappa = [MASTSWorkshop.vertical_diffusivity(station, depth, time)
+                 for time in times, depth in z]
+        map = heatmap!(axis, days_in_year, z, kappa;
+                       colormap = :viridis, colorscale = log10,
+                       colorrange = (1e-4, 1.1e-2))
+        mld = [MASTSWorkshop.mixed_layer_depth(station, time) for time in times]
+        lines!(axis, days_in_year, mld; color = :black, linewidth = 3.5)
+        lines!(axis, days_in_year, mld; color = :white, linestyle = :dash,
+               linewidth = 2)
+        hlines!(axis, [-300]; color = (:white, 0.8), linestyle = :dot,
+                linewidth = 1)
+        ylims!(axis, -500, 0)
+        if column == 2
+            Colorbar(figure[1, 3], map; label = "Vertical diffusivity (m² s⁻¹)",
+                     ticks = [1e-4, 1e-3, 1e-2])
+        end
+    end
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
 # Compare the two annual ecosystem references on the same deep grid.
 function MASTSWorkshop.plot_station_comparison(bats, nabe, filename::AbstractString;
                                               preview::Bool = isinteractive())
@@ -385,8 +423,8 @@ function MASTSWorkshop.plot_station_comparison(bats, nabe, filename::AbstractStr
     figure = Figure(size = (1250, 860), fontsize = 15)
     Label(figure[0, :], "Idealised BATS and NABE: annual ecosystem response";
           fontsize = 22, font = :bold)
-    for (column, title, metric) in ((1, "Surface phytoplankton", d -> d.surface_P),
-                                    (2, "Surface nitrate", d -> d.surface_NO₃))
+    for (column, title, metric) in ((1, "Top 10 m phytoplankton", d -> d.surface_P),
+                                    (2, "Top 10 m nitrate", d -> d.surface_NO₃))
         axis = Axis(figure[1, column]; title, xlabel = "Day", ylabel = "mmol N m⁻³")
         lines!(axis, bats.day, metric(bats); color = blue, linewidth = 2.5, label = "BATS")
         lines!(axis, nabe.day, metric(nabe); color = orange, linewidth = 2.5, label = "NABE")

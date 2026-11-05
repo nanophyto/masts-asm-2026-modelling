@@ -96,6 +96,15 @@ end
 station_output = (quick || reuse_results || content_only) ? nothing :
                  run_exercise("07_bats_nabe.jl", station_dir)
 
+# This diagnostic needs only prescribed forcing, so rebuild it when reusing
+# existing annual simulations as well as during each full scientific run.
+if reuse_results && !content_only
+    mkpath(station_dir)
+    code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_station_diffusivity(ARGS[1]; preview=false)"
+    filename = joinpath(station_dir, "station_diffusivity.png")
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $filename`)
+end
+
 # The physics diagram belongs to the appendix; the reference exercise
 # concentrates on simulation results and its five scientific figures.
 physics_figure = joinpath(reference_dir, "reference_physics.png")
@@ -119,6 +128,7 @@ figures = (
 parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(kind).png")
                           for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
 station_figures = ((station_dir, "station_forcing.png"),
+                   (station_dir, "station_diffusivity.png"),
                    (station_dir, "station_comparison.png"))
 if !content_only
     for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
@@ -227,6 +237,8 @@ end
 make_tutorial("07_bats_nabe.jl", (
     "WORKSHOP_STATION_FORCING_FIGURE" =>
         figure_block("station_forcing.png", "Contrasting idealised BATS and NABE physical forcing"),
+    "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
+        figure_block("station_diffusivity.png", "Seasonal depth-time vertical diffusivity at BATS and NABE"),
     "WORKSHOP_STATION_COMPARISON_FIGURE" =>
         figure_block("station_comparison.png", "Annual BATS-NABE ecosystem and deep-export comparison"),
 ))
@@ -236,7 +248,8 @@ make_tutorial("07_bats_nabe.jl", (
 physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
 write(joinpath(generated_dir, "physical_forcing.md"),
       replace(read(physics_src, String),
-              "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity")))
+              "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity"),
+              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" => figure_block("station_diffusivity.png", "Depth-time mixing at BATS and NABE")))
 
 makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",

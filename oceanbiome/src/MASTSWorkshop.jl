@@ -26,7 +26,7 @@ export column, results_directory, deep_grid_faces,
        plot_vertical_evolution, plot_reference_export, plot_export_profile, plot_idealised_physics,
        plot_nitrogen_partition, plot_living_fraction, plot_plankton_balance,
        plot_grazing_response, plot_carbon_export, plot_parameter_response, plot_parameter_export,
-       plot_station_forcing, plot_station_comparison
+       plot_station_forcing, plot_station_diffusivity, plot_station_comparison
 
 # The CairoMakie extension supplies these methods when plotting is requested.
 function plot_vertical_evolution end
@@ -41,6 +41,7 @@ function plot_carbon_export end
 function plot_parameter_response end
 function plot_parameter_export end
 function plot_station_forcing end
+function plot_station_diffusivity end
 function plot_station_comparison end
 
 end

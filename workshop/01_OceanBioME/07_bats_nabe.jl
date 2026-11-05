@@ -20,7 +20,7 @@ using Oceananigans.Units
 import MASTSWorkshop
 using MASTSWorkshop: analyse_column_output, results_directory,
                      write_diagnostics, write_export_profile,
-                     plot_station_forcing, plot_station_comparison
+                     plot_station_forcing, plot_station_diffusivity, plot_station_comparison
 
 output_dir = results_directory("bats_nabe")
 
@@ -29,13 +29,28 @@ output_dir = results_directory("bats_nabe")
 # Both deep columns share 60 cells: 10 m spacing from 0-300 m, 20 m from
 # 300-600 m, and 40 m from 600-1200 m. They share 30-minute time steps.
 # The physical figure compares annual light, mixed-layer depth, winter
-# nitrate structure and spring mixing.
+# nitrate structure and spring mixing. The depth-time panels show
+# diffusivity over the upper 500 m, with the mixed-layer depth overlaid.
 
 forcing_figure = joinpath(output_dir, "station_forcing.png")
 plot_station_forcing(forcing_figure)
 println("Saved $forcing_figure")
 
 #md # WORKSHOP_STATION_FORCING_FIGURE
+
+# ## How does vertical mixing evolve with depth?
+#
+# Both deep columns use the same 1200 m grid. These depth-time panels zoom
+# into the upper 500 m and use the same logarithmic diffusivity colour scale.
+# The white dashed curve marks mixed-layer depth; the horizontal dotted line
+# marks the bottom of the 300 m teaching column. Below the winter mixed layer,
+# diffusivity is approximately 1e-4 m²/s at both stations.
+
+diffusivity_figure = joinpath(output_dir, "station_diffusivity.png")
+plot_station_diffusivity(diffusivity_figure)
+println("Saved $diffusivity_figure")
+
+#md # WORKSHOP_STATION_DIFFUSIVITY_FIGURE
 
 # ## Run a reference ecosystem at each station
 #
@@ -70,7 +85,12 @@ end
 
 # ## Compare the two ecosystem responses
 #
-# The upper panels show seasonal surface biomass and nitrate. The lower panels
+# In the plots, "surface" means the top 0-10 m model cell, represented at
+# its centre (z = -5 m), not an average of the upper 100 m. Concentrations
+# are in mmol N/m³. The prominent NABE bloom is a provisional first-year
+# result influenced by the prescribed winter mixing and initial nitrate
+# profile; observed biomass and spin-up sensitivity remain to be checked.
+# The upper panels show seasonal top-cell biomass and nitrate. The lower panels
 # show the final-window normalised particle flux profile and cumulative export
 # at 1000 m. Flux profiles include the effects of initialisation and seasonal
 # adjustment; subsequent multi-year runs will distinguish persistent export
