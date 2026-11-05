@@ -2,10 +2,12 @@ module MASTSWorkshop
 
 include("idealised_physics.jl")
 include("column_diagnostics.jl")
+include("mld_comparison.jl")
 
 using .IdealisedPhysics: surface_PAR, mixed_layer_depth, vertical_diffusivity, initial_conditions,
                          nabe_surface_PAR, nabe_mixed_layer_depth, nabe_vertical_diffusivity,
                          nabe_initial_conditions, deep_bats_initial_conditions
+using .MLDComparison: read_gosml_mld, compare_mld_climatology, write_mld_summary
 include("column_configuration.jl")
 
 using .ColumnDiagnostics: face_index, sinking_courant, downward_nitrogen_flux, cumulative_trapezoid,
@@ -26,7 +28,8 @@ export column, results_directory, deep_grid_faces,
        plot_vertical_evolution, plot_reference_export, plot_export_profile, plot_idealised_physics,
        plot_nitrogen_partition, plot_living_fraction, plot_plankton_balance,
        plot_grazing_response, plot_carbon_export, plot_parameter_response, plot_parameter_export,
-       plot_station_forcing, plot_station_diffusivity, plot_station_comparison
+       plot_station_forcing, plot_station_diffusivity, plot_station_comparison,
+       read_gosml_mld, compare_mld_climatology, write_mld_summary, plot_mld_comparison
 
 # The CairoMakie extension supplies these methods when plotting is requested.
 function plot_vertical_evolution end
@@ -43,5 +46,6 @@ function plot_parameter_export end
 function plot_station_forcing end
 function plot_station_diffusivity end
 function plot_station_comparison end
+function plot_mld_comparison end
 
 end

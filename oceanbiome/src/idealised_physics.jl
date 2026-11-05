@@ -12,8 +12,20 @@ const year = 365days
 surface_PAR(t) = 2 + 60 * (1 - cos(2pi * t / year))  # W / m^2
 surface_PAR(x, y, t) = surface_PAR(t)
 
-# Negative depths: approximately 140 m in winter and 15 m in summer.
-mixed_layer_depth(t) = -(15 + 125 * (1 + cos(2pi * t / year)) / 2)
+# Smooth, periodic two-harmonic approximations to the GOSML monthly-mean MLD
+# seasonal cycles (metres, positive down). Coefficients are deliberately
+# rounded, guided by the BATS/NABE observational comparison rather than an
+# exact fit. They preserve a fast, standalone forcing callback with no file I/O.
+# The quantitative observed-versus-idealised fit is evaluated separately from
+# the actual downloaded GOSML CSV in compare_mld_climatology().
+@inline function seasonal_mld(t, mean, cos1, sin1, cos2, sin2)
+    phase = 2pi * t / year
+    return -(mean + cos1 * cos(phase) + sin1 * sin(phase) +
+             cos2 * cos(2phase) + sin2 * sin(2phase))
+end
+
+# BATS: around 95 m late-winter maximum; around 15 m early-summer minimum.
+mixed_layer_depth(t) = seasonal_mld(t, 48.3, 38.0, 9.9, 4.6, 7.9)
 
 # Stronger turbulent mixing above the mixed-layer base (m^2 / s).
 vertical_diffusivity(z, t) =
@@ -38,13 +50,9 @@ initial_conditions() = (
 nabe_surface_PAR(t) = 2 + 48 * (1 - cos(2pi * t / year))
 nabe_surface_PAR(x, y, t) = nabe_surface_PAR(t)
 
-# Rapid spring shoaling and autumn deepening; roughly 350 m winter / 20 m summer.
-function nabe_mixed_layer_depth(t)
-    day = mod(t, year) / days
-    spring = 1 / (1 + exp(-(day - 100) / 10))
-    autumn = 1 / (1 + exp(-(day - 290) / 15))
-    return -(20 + 330 * (1 - spring * (1 - autumn)))
-end
+# NABE: late-winter maximum around 190 m (February), rapid spring
+# shoaling, a summer minimum around 20 m and gradual autumn deepening.
+nabe_mixed_layer_depth(t) = seasonal_mld(t, 84.3, 66.5, 44.3, 1.2, 25.1)
 
 nabe_vertical_diffusivity(z, t) =
     1e-4 + 1e-2 * (1 + tanh((z - nabe_mixed_layer_depth(t)) / 10)) / 2

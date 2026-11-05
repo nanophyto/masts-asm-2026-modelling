@@ -19,8 +19,8 @@ The figure shows three related physical inputs:
 
 - **Surface PAR:** An idealised annual cycle, with a winter minimum and
   stronger illumination toward midsummer. The prescribed value is in W m⁻².
-- **Mixed-layer depth:** A diagnostic transition from a roughly 140 m winter
-  mixed layer toward a roughly 15 m summer layer.
+- **Mixed-layer depth:** A smooth, GOSML-informed seasonal transition from
+  a roughly 95 m late-winter mixed layer toward a roughly 15 m summer layer.
 - **Vertical diffusivity:** Stronger mixing above the mixed-layer base and
   weaker mixing below it. The white curve marks the prescribed mixed-layer
   depth in the time-depth diagram.
@@ -40,10 +40,10 @@ production exercises at BATS and NABE both use 300 m / 30-cell columns. Their `d
 | Setting | Deep BATS | Idealised NABE |
 |:--|:--|:--|
 | Location represented | 31.7 N, 64.2 W | ~47 N, 20 W |
-| Winter mixed-layer depth | 140 m | ~350 m |
-| Summer mixed-layer depth | 15 m | ~20 m |
+| Late-winter maximum mixed-layer depth | ~95 m | ~190 m (February) |
+| Summer minimum mixed-layer depth | ~15 m | ~20 m |
 | Surface PAR | 2-122 W/m2 | 2-98 W/m2 |
-| Spring mixed-layer transition | Smooth annual cycle | Rapid shoaling around day 100 |
+| Spring mixed-layer transition | Gradual shoaling March–May | Faster shoaling March–May |
 | Initial near-surface nitrate | ~0.7 mmol N/m3 | ~6.0 mmol N/m3 |
 | Vertical diffusivity, surface mixed layer | up to ~5.1e-3 m2/s | up to ~1.01e-2 m2/s |
 
@@ -57,8 +57,35 @@ The upper 500 m of the shared 1200 m deep grid is shown, where the seasonal
 mixed layers affect nutrient resupply. White dashed curves mark the prescribed
 mixed-layer depths; the horizontal dotted line indicates the 300 m teaching
 domain. Below the mixed layer the background diffusivity is approximately
-10⁻⁴ m² s⁻¹. NABE's deeper winter mixing and rapid shoaling around day 100
-contrast with BATS's shallower, more gradual seasonal cycle.
+10⁻⁴ m² s⁻¹. NABE now peaks near 190 m in late winter, compared with
+roughly 95 m at BATS; its seasonal shoaling remains more pronounced.
+
+### Observational mixed-layer depth: NOAA GOSML
+
+WORKSHOP_GOSML_COMPARISON_FIGURE
+
+The two stations share the same **positive-down** observational depth convention
+and vertical axis. **Blue circles** show only the GOSML monthly means, overlaid
+on the **red daily idealised-forcing curves**. The original observational CSV
+retains medians and percentiles for more detailed investigation. Both
+idealised seasonal curves were revised using the observed monthly-mean comparison:
+BATS peaks near 95 m and NABE near 190 m, with a later NABE winter maximum.
+
+The quantitative comparison uses the **average of the idealised daily MLD across
+each calendar month**. A positive bias means the model prescribes deeper mixing
+than the observed monthly means. The table is regenerated automatically from the
+committed CSV during each full documentation build.
+
+WORKSHOP_GOSML_SUMMARY_TABLE
+
+The observed and idealised curves use a common January-to-December calendar,
+with day zero corresponding to 1 January. The idealised annual cycle represents
+midwinter on day zero, while the monthly observations aggregate multiple years.
+The forcing adjustment improves the match in seasonal depth and timing while
+preserving a smooth idealised annual cycle. It changes simulated nutrient supply
+and bloom timing, so annual ecosystem figures should be regenerated with a full
+scientific docs build and assessed alongside spin-up sensitivity. Nitrate and
+biomass also depend on the specified initial conditions.
 
 These parameters are **first-pass teaching scenarios**, chosen to distinguish
 subtropical conditions and a bloom-forming temperate Atlantic environment.
@@ -68,11 +95,11 @@ surface boundary value nor an upper-100 m average. NABE starts near
 6 mmol N m⁻³ nitrate in this cell, compared with approximately
 0.7 mmol N m⁻³ at BATS. During the first simulated year, deep winter mixing
 can resupply NABE's surface layer from the more nitrate-rich water below.
-The pronounced spring phytoplankton maximum (approximately
-2.2 mmol N m⁻³, or 175 mg C m⁻³ at C:N = 106:16) is a provisional model
-outcome. The first year includes adjustment from the specified initial
-profiles; comparison with observed nutrients and biomass and multi-year
-spin-up tests will determine how representative the bloom is.
+The simulated spring bloom remains a provisional first-year outcome; its
+magnitude and timing should be reassessed after the forcing update. The first
+year includes adjustment from the specified initial profiles; comparison with
+observed nutrients and biomass and multi-year spin-up tests will determine
+how representative the bloom is.
 
 The nitrate profiles are depth-dependent but are not yet calibrated against
 station observations. Initial plankton and organic-matter fields also decrease
@@ -81,10 +108,10 @@ with depth to limit artificial deep biological inventories. The annual cycle beg
 The shared deep domain reaches 1200 m with 60 cells, preserving 10 m resolution
 through the upper 300 m, then increasing to 20 m and 40 m cells below 300 m
 and 600 m. Export can be diagnosed at grid faces 100, 300, and 1000 m. All
-vertical inventories use the physical thickness of each cell. The idealised
-NABE winter mixed layer can extend below the 300 m teaching domain; within
-that domain the water column is effectively fully mixed during deep winter.
-The deep simulation resolves the winter mixed layer and a deeper nutrient reservoir.
+vertical inventories use the physical thickness of each cell. The revised
+idealised winter mixed layers remain within the 300 m teaching domain at
+both stations. The deep simulation resolves export below the mixed layer
+and the deeper nutrient reservoir.
 
 ### Scientific sources and next validation
 

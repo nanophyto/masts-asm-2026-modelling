@@ -23,11 +23,12 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     end
 end
 
-include("plot_preview.jl")
-
 using Oceananigans.Fields: interior
 using Oceananigans.Grids: znodes
 using Oceananigans.Units
+
+include("mld_comparison_tests.jl")
+include("plot_preview.jl")
 
 @testset "Idealised physical forcing" begin
     @test surface_PAR(0, 0, 180days) > surface_PAR(0, 0, 0)
@@ -229,8 +230,14 @@ end
         @test shallow.initial.NO₃(0, 0, -5) == shallow.initial.NO₃(-5)
         @test deep.initial.P(-1000) < deep.initial.P(-5)
     end
-    @test MASTSWorkshop.nabe_mixed_layer_depth(0) < -300
-    @test MASTSWorkshop.nabe_mixed_layer_depth(180days) > -35
+    # Table-driven seasonal checks keep the station-specific tests concise.
+    for (station, winter_day, winter_min, winter_max, summer_min, summer_max) in
+        ((:BATS, 15, 85, 105, 10, 30), (:NABE, 45, 175, 205, 15, 40))
+        @test winter_min < -mixed_layer_depth(station, winter_day * days) < winter_max
+        @test summer_min < -mixed_layer_depth(station, 180days) < summer_max
+        @test mixed_layer_depth(station, 0) ≈ mixed_layer_depth(station, 365days)
+    end
+    @test MASTSWorkshop.nabe_mixed_layer_depth(45days) < MASTSWorkshop.nabe_mixed_layer_depth(0)
     @test MASTSWorkshop.nabe_mixed_layer_depth(0) < mixed_layer_depth(0)
     @test MASTSWorkshop.nabe_surface_PAR(180days) > MASTSWorkshop.nabe_surface_PAR(0)
     @test MASTSWorkshop.column(:NABE).initial.NO₃(-5) > MASTSWorkshop.column(:BATS).initial.NO₃(-5)

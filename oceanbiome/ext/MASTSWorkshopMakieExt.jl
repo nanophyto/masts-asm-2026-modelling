@@ -413,6 +413,47 @@ function MASTSWorkshop.plot_station_diffusivity(filename::AbstractString;
     return filename
 end
 
+# Observed monthly *means only* are plotted over the smooth idealised
+# seasonal forcing. Positive-down depths increase downwards in both panels.
+# The complete GOSML distribution remains available in the source CSV.
+function MASTSWorkshop.plot_mld_comparison(comparison, filename::AbstractString;
+                                           preview::Bool = isinteractive())
+    stations = (:BATS, :NABE)
+    deepest = maximum(max(maximum(getproperty(comparison, station).observed_mean),
+                          maximum(getproperty(comparison, station).model_daily))
+                      for station in stations)
+    limit = max(250.0, 50 * ceil(deepest / 50))
+    figure = Figure(size = (1450, 550), fontsize = 15)
+    Label(figure[0, 1:2], "Observed mean vs idealised mixed-layer depth: BATS and NABE";
+          fontsize = 22, font = :bold)
+    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    for (column, station) in enumerate(stations)
+        data = getproperty(comparison, station)
+        lat = "$(abs(round(data.lat_selected; digits = 1)))°$(data.lat_selected >= 0 ? "N" : "S")"
+        lon = "$(abs(round(data.lon_selected; digits = 1)))°$(data.lon_selected >= 0 ? "E" : "W")"
+        axis = Axis(figure[1, column]; title = "$(station) — GOSML cell $lat, $lon", xlabel = "Month",
+                    ylabel = "Mixed-layer depth (m; positive down)",
+                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4,
+                    yreversed = true)
+        lines!(axis, data.month_x, data.model_daily;
+               color = :orangered, linewidth = 3, label = "Idealised forcing")
+        scatter!(axis, data.months, data.observed_mean;
+                 color = :royalblue, marker = :circle, markersize = 12,
+                 label = "GOSML monthly mean")
+        xlims!(axis, 0.5, 12.5)
+        ylims!(axis, 0, limit)
+        axislegend(axis; position = :rb, framevisible = false, labelsize = 13)
+    end
+    Label(figure[2, 1:2],
+          "NOAA GOSML (Johnson & Lyman, 2022): points are observed monthly means; " *
+          "lines are the prescribed daily forcing. Same vertical scale at both stations.";
+          fontsize = 12)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
 # Compare the two annual ecosystem references on the same deep grid.
 function MASTSWorkshop.plot_station_comparison(bats, nabe, filename::AbstractString;
                                               preview::Bool = isinteractive())

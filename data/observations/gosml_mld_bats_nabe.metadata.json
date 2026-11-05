@@ -2,7 +2,7 @@
   "dataset": "NOAA PMEL Global Ocean Surface Mixed Layer Statistical Monthly Climatology (GOSML)",
   "citation": "Johnson and Lyman (2022), Journal of Geophysical Research: Oceans, doi:10.1029/2021JC018219",
   "access_date_utc": "2026-11-05",
-  "generated_at_utc": "2026-11-05T13:31:09.518923+00:00",
+  "generated_at_utc": "2026-11-05T14:57:58.798096+00:00",
   "method": "Nearest ocean grid cell with 12 positive, finite, percentile-consistent MLD values and positive mapping support; no spatial interpolation",
   "month_encoding": "January=1 through December=12; sorted from NOAA monthly or decimal-month coordinate",
   "mld_definition": "Holte and Talley (2009) density algorithm on Argo profiles; statistics are spatially/time/bathymetrically weighted (Johnson and Lyman, 2022)",

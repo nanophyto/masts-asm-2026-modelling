@@ -18,6 +18,14 @@ reuse_results = get(ENV, "DOCS_REUSE_RESULTS", "false") == "true"
 quick && reuse_results && error("DOCS_REUSE_RESULTS requires full-run reference outputs")
 output_base = joinpath(root, "outputs", "oceanbiome", quick ? "docs_smoke" : "reference_docs")
 
+# Reuse the small committed observational CSV. Full documentation builds always
+# regenerate the MLD figure and metrics without downloading NOAA NetCDF files.
+gosml_csv = joinpath(root, "data", "observations", "gosml_mld_bats_nabe.csv")
+if !quick && !content_only && !isfile(gosml_csv)
+    error("Missing $gosml_csv. Generate and commit the observational reference with " *
+          "`conda run -n masts-gosml python scripts/prepare_mld_climatology.py` before building docs.")
+end
+
 function run_exercise(name, output_dir)
     exercise = joinpath(exercise_dir, name)
     command = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $exercise`
@@ -96,19 +104,36 @@ end
 station_output = (quick || reuse_results || content_only) ? nothing :
                  run_exercise("07_bats_nabe.jl", station_dir)
 
-# This diagnostic needs only prescribed forcing, so rebuild it when reusing
-# existing annual simulations as well as during each full scientific run.
+# These prescribed-physics figures are cheap to regenerate even when annual
+# biological outputs are being reused. A full build also re-runs the ecosystem
+# under the revised MLD curves.
 if reuse_results && !content_only
+    @warn "DOCS_REUSE_RESULTS reuses annual ecosystem outputs; run a full build after changing MLD forcing to update the biology figures."
     mkpath(station_dir)
-    code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_station_diffusivity(ARGS[1]; preview=false)"
-    filename = joinpath(station_dir, "station_diffusivity.png")
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $filename`)
+    code = "using MASTSWorkshop, CairoMakie; " *
+           "MASTSWorkshop.plot_station_forcing(ARGS[1]; preview=false); " *
+           "MASTSWorkshop.plot_station_diffusivity(ARGS[2]; preview=false)"
+    forcing_file = joinpath(station_dir, "station_forcing.png")
+    diffusivity_file = joinpath(station_dir, "station_diffusivity.png")
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $forcing_file $diffusivity_file`)
+end
+
+# This figure and its diagnostics are rebuilt from the checked-in GOSML CSV
+# even with DOCS_REUSE_RESULTS=true; unlike the annual biology, they are quick.
+mld_png = joinpath(station_dir, "gosml_mld_comparison.png")
+mld_summary = joinpath(station_dir, "gosml_mld_summary.md")
+if !quick && !content_only
+    mkpath(station_dir)
+    script = joinpath(root, "scripts", "plot_mld_comparison.jl")
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $gosml_csv $mld_png $mld_summary`)
+    check_png(mld_png)
+    cp(mld_summary, joinpath(assets_dir, "gosml_mld_summary.md"); force = true)
 end
 
 # The physics diagram belongs to the appendix; the reference exercise
 # concentrates on simulation results and its five scientific figures.
 physics_figure = joinpath(reference_dir, "reference_physics.png")
-if !content_only && !isfile(physics_figure)
+if !content_only && (reuse_results || !isfile(physics_figure))
     mkpath(reference_dir)
     code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_idealised_physics(ARGS[1]; preview=false)"
     run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $physics_figure`)
@@ -129,7 +154,8 @@ parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(k
                           for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
 station_figures = ((station_dir, "station_forcing.png"),
                    (station_dir, "station_diffusivity.png"),
-                   (station_dir, "station_comparison.png"))
+                   (station_dir, "station_comparison.png"),
+                   (station_dir, "gosml_mld_comparison.png"))
 if !content_only
     for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
         check_png(joinpath(directory, filename))
@@ -241,6 +267,9 @@ make_tutorial("07_bats_nabe.jl", (
         figure_block("station_diffusivity.png", "Seasonal depth-time vertical diffusivity at BATS and NABE"),
     "WORKSHOP_STATION_COMPARISON_FIGURE" =>
         figure_block("station_comparison.png", "Annual BATS-NABE ecosystem and deep-export comparison"),
+    "WORKSHOP_GOSML_COMPARISON_FIGURE" =>
+        figure_block("gosml_mld_comparison.png", "Observed GOSML versus idealised mixed-layer depth at BATS and NABE"),
+    "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md"),
 ))
 
 # The appendix is a template: Documenter should process only its generated
@@ -249,7 +278,9 @@ physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
 write(joinpath(generated_dir, "physical_forcing.md"),
       replace(read(physics_src, String),
               "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity"),
-              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" => figure_block("station_diffusivity.png", "Depth-time mixing at BATS and NABE")))
+              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" => figure_block("station_diffusivity.png", "Depth-time mixing at BATS and NABE"),
+              "WORKSHOP_GOSML_COMPARISON_FIGURE" => figure_block("gosml_mld_comparison.png", "GOSML mixed-layer climatology versus prescribed BATS and NABE forcing"),
+              "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md")))
 
 makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",

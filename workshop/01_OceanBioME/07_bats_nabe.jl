@@ -52,6 +52,21 @@ println("Saved $diffusivity_figure")
 
 #md # WORKSHOP_STATION_DIFFUSIVITY_FIGURE
 
+# ## How does the prescribed mixed layer compare with observations?
+#
+# Blue points show NOAA GOSML monthly mean MLD only, overlaid on the
+# smooth idealised seasonal curves. All depths increase downward. Both
+# curves were revised toward the observed seasonal timing and magnitude.
+# Calendar-month mean forcing determines the bias and RMSE table below.
+# Winter means December–March; positive bias indicates overly deep mixing.
+# The observations were extracted offline by the dedicated Conda data-prep
+# environment. The full docs build regenerates the figure and table from the
+# committed CSV; normal participant runs use these published reference results.
+
+#md # WORKSHOP_GOSML_COMPARISON_FIGURE
+
+#md # WORKSHOP_GOSML_SUMMARY_TABLE
+
 # ## Run a reference ecosystem at each station
 #
 # Each simulation uses the same default LOBSTER biology. The nitrate profiles
