@@ -16,7 +16,7 @@ using MASTSWorkshop: results_directory, analyse_column_output, write_diagnostics
 
 # ## Define the water column
 #
-# The prepared BATS-like environment supplies a 500 m column with 50 cells,
+# The prepared BATS-like environment supplies a 300 m column with 30 cells,
 # a 30-minute time step, initial tracer concentrations, seasonal light,
 # and vertically implicit mixing. Both experiments use the same physics.
 

@@ -20,7 +20,8 @@ vertical_diffusivity(z, t) =
     1e-4 + 5e-3 * (1 + tanh((z - mixed_layer_depth(t)) / 10)) / 2
 vertical_diffusivity(x, y, z, t) = vertical_diffusivity(z, t)
 
-# LOBSTER core tracer concentrations, mmol N / m^3.
+# Optional legacy uniform LOBSTER initial conditions, mmol N / m^3.
+# The prepared station columns use depth-dependent profiles below.
 initial_conditions() = (
     P = 0.03,
     Z = 0.03,
@@ -49,24 +50,46 @@ nabe_vertical_diffusivity(z, t) =
     1e-4 + 1e-2 * (1 + tanh((z - nabe_mixed_layer_depth(t)) / 10)) / 2
 nabe_vertical_diffusivity(x, y, z, t) = nabe_vertical_diffusivity(z, t)
 
+# Station-aware accessors for plotting and evaluating the prescribed forcing.
+# Model callbacks retain the signatures expected by Oceananigans.
+function mixed_layer_depth(station::Symbol, t)
+    station === :BATS && return mixed_layer_depth(t)
+    station === :NABE && return nabe_mixed_layer_depth(t)
+    throw(ArgumentError("Unknown station: $station"))
+end
+function vertical_diffusivity(station::Symbol, z, t)
+    station === :BATS && return vertical_diffusivity(z, t)
+    station === :NABE && return nabe_vertical_diffusivity(z, t)
+    throw(ArgumentError("Unknown station: $station"))
+end
+function surface_PAR(station::Symbol, t)
+    station === :BATS && return surface_PAR(t)
+    station === :NABE && return nabe_surface_PAR(t)
+    throw(ArgumentError("Unknown station: $station"))
+end
+
 # Provisional depth-varying nitrate fields (mmol N/m3), with winter conditions
 # as the start of each annual simulation. Replace with WOA-derived station
 # profiles once the comparison has been validated against observations.
-bats_deep_nitrate(x, y, z) = 0.5 + 11.5 * (1 + tanh((-z - 150) / 75)) / 2
-nabe_nitrate(x, y, z) = 6.0 + 6.0 * (1 + tanh((-z - 250) / 100)) / 2
+# Flat/Flat/Bounded Oceananigans columns initialise fields by calling f(z).
+# Retain three-coordinate overloads for interactive plotting and inspection.
+bats_deep_nitrate(z) = 0.5 + 11.5 * (1 + tanh((-z - 150) / 75)) / 2
+bats_deep_nitrate(x, y, z) = bats_deep_nitrate(z)
+nabe_nitrate(z) = 6.0 + 6.0 * (1 + tanh((-z - 250) / 100)) / 2
+nabe_nitrate(x, y, z) = nabe_nitrate(z)
 
 # Begin with most plankton concentrated near the surface. These idealised
-# profiles limit artificial deep plankton/particle inventories on a 1200 m
-# column. Spin-up sensitivity remains part of subsequent validation.
+# profiles limit artificial deep plankton/particle inventories on both the
+# 300 m teaching and 1200 m research columns. Spin-up sensitivity remains part of subsequent validation.
 function deep_initial_conditions(nitrate)
     return (
-        P = (x, y, z) -> 0.03 * exp(z / 75),
-        Z = (x, y, z) -> 0.03 * exp(z / 100),
+        P = z -> 0.03 * exp(z / 75),
+        Z = z -> 0.03 * exp(z / 100),
         NO₃ = nitrate,
-        NH₄ = (x, y, z) -> 0.05 * exp(z / 200),
-        DOM = (x, y, z) -> 0.02 * exp(z / 300),
-        sPOM = (x, y, z) -> 0.01 * exp(z / 200),
-        bPOM = (x, y, z) -> 0.005 * exp(z / 350),
+        NH₄ = z -> 0.05 * exp(z / 200),
+        DOM = z -> 0.02 * exp(z / 300),
+        sPOM = z -> 0.01 * exp(z / 200),
+        bPOM = z -> 0.005 * exp(z / 350),
     )
 end
 

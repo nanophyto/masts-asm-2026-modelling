@@ -190,7 +190,7 @@ end
 function MASTSWorkshop.plot_idealised_physics(filename::AbstractString; preview::Bool = isinteractive())
     day_samples = collect(0:5:365)
     times = day_samples .* days
-    depths = collect(range(-500.0, 0.0; length = 101))
+    depths = collect(range(-MASTSWorkshop.column(:BATS).grid.Lz, 0.0; length = 101))
     mixing = [MASTSWorkshop.vertical_diffusivity(z, t) for t in times, z in depths]
 
     figure = Figure(size = (1100, 760), fontsize = 15)
@@ -331,10 +331,10 @@ end
 function MASTSWorkshop.plot_station_forcing(filename::AbstractString; preview::Bool = isinteractive())
     days_in_year = collect(0:5:365)
     times = days_in_year .* days
-    grid = MASTSWorkshop.column(:NABE).grid
+    grid = MASTSWorkshop.column(:NABE; deep = true).grid
     z = collect(znodes(grid, Center()))
     bats = MASTSWorkshop.column(:BATS; deep = true).initial
-    nabe = MASTSWorkshop.column(:NABE).initial
+    nabe = MASTSWorkshop.column(:NABE; deep = true).initial
 
     figure = Figure(size = (1250, 860), fontsize = 15)
     Label(figure[0, :], "Idealised Atlantic columns: BATS and NABE";
@@ -356,9 +356,9 @@ function MASTSWorkshop.plot_station_forcing(filename::AbstractString; preview::B
 
     nitrate = Axis(figure[2, 1]; title = "Prescribed initial nitrate (midwinter)",
                    xlabel = "mmol N m⁻³", ylabel = "Depth (m)")
-    lines!(nitrate, [bats.NO₃(0, 0, zz) for zz in z], z;
+    lines!(nitrate, [bats.NO₃(zz) for zz in z], z;
            color = blue, linewidth = 2.5, label = "BATS")
-    lines!(nitrate, [nabe.NO₃(0, 0, zz) for zz in z], z;
+    lines!(nitrate, [nabe.NO₃(zz) for zz in z], z;
            color = orange, linewidth = 2.5, label = "NABE")
     axislegend(nitrate; position = :rb, framevisible = false)
 

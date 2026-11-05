@@ -203,7 +203,7 @@ make_tutorial("00_reference_column.jl", (
     "WORKSHOP_REFERENCE_PARTITION_FIGURE" => figure_block("reference_nitrogen_partition.png", "Upper 100 m nitrogen inventories and fractions"),
     "WORKSHOP_REFERENCE_LIVING_FIGURE" => figure_block("reference_living_fraction.png", "Living particulate and dissolved-organic nitrogen fractions"),
     "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
-    "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–500 m and Martin-curve comparison"),
+    "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–300 m and Martin-curve comparison"),
     "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
 ))
 

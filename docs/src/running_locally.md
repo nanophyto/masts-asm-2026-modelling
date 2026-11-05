@@ -86,8 +86,9 @@ All seven scripts generate JLD2 tracer profiles, diagnostic CSVs and PNG figures
 under `workshop/results/oceanbiome/`, in their own experiment directories.
 The first plot may take longer while CairoMakie loads.
 
-The Julia exercises use 50 vertical cells over 500 m, a 30-minute time step,
-vertically implicit mixing and a 365-day seasonal simulation.
+The default Julia exercises use 30 vertical cells over 300 m, a 30-minute time step,
+vertically implicit mixing and a 365-day seasonal simulation. The BATS/NABE
+comparison uses `deep=true` for 60 stretched cells over 1200 m.
 
 ## Run the workshop image with Docker
 

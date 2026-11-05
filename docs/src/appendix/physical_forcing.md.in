@@ -7,7 +7,7 @@ inspectable alongside the biological experiments.
 
 ## Current reference column: idealised seasonal forcing
 
-The reference simulation uses a 500 m column with 50 uniform cells,
+The default reference simulation uses a 300 m column with 30 uniform 10 m cells,
 a 30-minute time step and vertically implicit mixing. Its
 annual forcing begins in midwinter and repeats every 365 days. The
 reference tutorial spans the complete annual cycle, including spring, summer,
@@ -34,8 +34,8 @@ of PAR within the column.
 ## Idealised BATS and NABE comparison
 
 The [BATS-NABE comparison](07_bats_nabe.md) adds a North Atlantic spring-bloom
-scenario and uses the same stretched grid at both stations. The original BATS
-reference exercises keep their tested 500 m / 50-cell configuration.
+scenario and uses the same stretched grid at both stations. The default production exercises at BATS and NABE both use 300 m / 30-cell
+columns. Their `deep=true` alternatives use the shared 1200 m / 60-cell grid.
 
 | Setting | Deep BATS | Idealised NABE |
 |:--|:--|:--|
@@ -53,10 +53,13 @@ The nitrate profiles are depth-dependent but are not yet calibrated against
 station observations. Initial plankton and organic-matter fields also decrease
 with depth to limit artificial deep biological inventories. The annual cycle begins in midwinter.
 
-The stretched domain reaches 1200 m with 60 cells, preserving 10 m resolution
+The shared deep domain reaches 1200 m with 60 cells, preserving 10 m resolution
 through the upper 300 m, then increasing to 20 m and 40 m cells below 300 m
 and 600 m. Export can be diagnosed at grid faces 100, 300, and 1000 m. All
-vertical inventories use the physical thickness of each cell.
+vertical inventories use the physical thickness of each cell. The idealised
+NABE winter mixed layer can extend below the 300 m teaching domain; within
+that domain the water column is effectively fully mixed during deep winter.
+The deep simulation resolves the winter mixed layer and a deeper nutrient reservoir.
 
 ### Scientific sources and next validation
 
