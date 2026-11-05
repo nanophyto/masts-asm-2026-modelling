@@ -55,7 +55,7 @@ println("Saved $diffusivity_figure")
 # ## How does the prescribed mixed layer compare with observations?
 #
 # Blue points show NOAA GOSML monthly mean MLD only, overlaid on the
-# smooth idealised seasonal curves. All depths increase downward. Both
+# smooth idealised seasonal curves. Depth is plotted as negative downward. Both
 # curves were revised toward the observed seasonal timing and magnitude.
 # Calendar-month mean forcing determines the bias and RMSE table below.
 # Winter means December–March; positive bias indicates overly deep mixing.

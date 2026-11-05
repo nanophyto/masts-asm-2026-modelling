@@ -423,32 +423,35 @@ function MASTSWorkshop.plot_mld_comparison(comparison, filename::AbstractString;
                           maximum(getproperty(comparison, station).model_daily))
                       for station in stations)
     limit = max(250.0, 50 * ceil(deepest / 50))
-    figure = Figure(size = (1450, 550), fontsize = 15)
+    figure = Figure(size = (1450, 650), fontsize = 15)
     Label(figure[0, 1:2], "Observed mean vs idealised mixed-layer depth: BATS and NABE";
           fontsize = 22, font = :bold)
     month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    legend_entries = nothing
+    legend_labels = ["Idealised forcing", "GOSML monthly mean"]
     for (column, station) in enumerate(stations)
         data = getproperty(comparison, station)
-        lat = "$(abs(round(data.lat_selected; digits = 1)))°$(data.lat_selected >= 0 ? "N" : "S")"
-        lon = "$(abs(round(data.lon_selected; digits = 1)))°$(data.lon_selected >= 0 ? "E" : "W")"
-        axis = Axis(figure[1, column]; title = "$(station) — GOSML cell $lat, $lon", xlabel = "Month",
-                    ylabel = "Mixed-layer depth (m; positive down)",
-                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4,
-                    yreversed = true)
-        lines!(axis, data.month_x, data.model_daily;
-               color = :orangered, linewidth = 3, label = "Idealised forcing")
-        scatter!(axis, data.months, data.observed_mean;
-                 color = :royalblue, marker = :circle, markersize = 12,
-                 label = "GOSML monthly mean")
+        axis = Axis(figure[1, column]; title = string(station), xlabel = "Month",
+                    ylabel = "Mixed-layer depth (m; negative down)",
+                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4)
+        idealised = lines!(axis, data.month_x, .-data.model_daily;
+                           color = :orangered, linewidth = 3)
+        observed = scatter!(axis, data.months, .-data.observed_mean;
+                            color = :royalblue, marker = :circle, markersize = 12)
+        isnothing(legend_entries) && (legend_entries = [idealised, observed])
         xlims!(axis, 0.5, 12.5)
-        ylims!(axis, 0, limit)
-        axislegend(axis; position = :rb, framevisible = false, labelsize = 13)
+        ylims!(axis, -limit, 0)
     end
-    Label(figure[2, 1:2],
+    Legend(figure[2, 1:2], legend_entries, legend_labels;
+           orientation = :horizontal, framevisible = true,
+           tellwidth = false, tellheight = true)
+    Label(figure[3, 1:2],
           "NOAA GOSML (Johnson & Lyman, 2022): points are observed monthly means; " *
-          "lines are the prescribed daily forcing. Same vertical scale at both stations.";
+          "lines are the prescribed daily forcing.";
           fontsize = 12)
+    rowsize!(figure.layout, 2, Auto())
+    rowsize!(figure.layout, 3, Auto())
     save(filename, figure)
     preview && display(figure)
     return filename

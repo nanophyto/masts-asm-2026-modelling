@@ -64,8 +64,8 @@ roughly 95 m at BATS; its seasonal shoaling remains more pronounced.
 
 WORKSHOP_GOSML_COMPARISON_FIGURE
 
-The two stations share the same **positive-down** observational depth convention
-and vertical axis. **Blue circles** show only the GOSML monthly means, overlaid
+The two stations share the same **negative-down** depth convention
+in the comparison plot. **Blue circles** show only the GOSML monthly means, overlaid
 on the **red daily idealised-forcing curves**. The original observational CSV
 retains medians and percentiles for more detailed investigation. Both
 idealised seasonal curves were revised using the observed monthly-mean comparison:
