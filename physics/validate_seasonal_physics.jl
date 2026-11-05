@@ -84,8 +84,8 @@ function validate(station, filepath)
 
     for (col, name, ylabel) in ((1, :T, "10 m temperature (°C)"),
                                 (2, :S, "10 m salinity (g kg⁻¹)"))
-        axis = Axis(figure[2, col], title = "Near-surface $name", xlabel = "Month",
-                    ylabel, xticks = (1:12, MONTH_NAMES))
+        axis = Axis(figure[2, col]; title = "Near-surface $name", xlabel = "Month",
+                    ylabel = ylabel, xticks = (1:12, MONTH_NAMES))
         lines!(axis, 1:12, surface_monthly(output, name, 10);
                color = :royalblue, linewidth = 3)
         if !isnothing(previous)
@@ -100,7 +100,7 @@ function validate(station, filepath)
     for (col, name, xlabel) in ((1, :T, "Temperature (°C)"),
                                 (2, :S, "Salinity (g kg⁻¹)"))
         ax = Axis(figure[3, col]; title = "January column hydrography",
-                  xlabel, ylabel = "Depth (m)")
+                  xlabel = xlabel, ylabel = "Depth (m)")
         field = name == :T ? output.forcing.temperature : output.salinity
         lines!(ax, field[:, 1], output.forcing.centres; color = :royalblue,
                linewidth = 3, label = "After spin-up")
