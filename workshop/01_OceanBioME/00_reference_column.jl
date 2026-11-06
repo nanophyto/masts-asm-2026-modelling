@@ -18,7 +18,7 @@ using MASTSWorkshop: results_directory, analyse_column_output, write_diagnostics
 
 # ## Define the water column
 #
-# The prepared BATS-like environment supplies the 500 m grid, 30-minute
+# The prepared BATS-like environment supplies the 300 m grid, 30-minute
 # time step, initial concentrations, light and vertically implicit mixing.
 
 grid, time_step, initial, closure, surface_PAR = MASTSWorkshop.column(:BATS)
@@ -81,7 +81,7 @@ println("Saved $filename and diagnostics CSV")
 #
 # These depth-time sections show the major LOBSTER tracers in the annual
 # reference simulation: zooplankton, phytoplankton, nitrate, small POM,
-# large POM and DOM. Together they show how the initially uniform ecosystem
+# large POM and DOM. Together they show how the initially prescribed ecosystem
 # responds to light, mixing and biological processes.
 
 vertical_figure_path = joinpath(output_dir, "reference_vertical_evolution.png")
@@ -138,7 +138,7 @@ println("Saved $export_figure_path")
 
 # ## Compare export attenuation with the Martin curve
 #
-# Diagnose particle flux every 50 m down to 500 m. The first panel compares
+# Diagnose particle flux every 50 m down to 300 m. The first panel compares
 # LOBSTER's final 90-day mean flux against the [Martin et al. (1987)](https://doi.org/10.1016/0198-0149(87)90086-0) empirical
 # curve, normalized to the simulated flux at 100 m. It also fits a power-law
 # exponent to the model values below 100 m. A negative b indicates that

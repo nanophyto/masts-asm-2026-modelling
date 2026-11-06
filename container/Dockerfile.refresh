@@ -53,4 +53,4 @@ RUN /opt/workshop/python/bin/python -m unittest discover -s abil/tests -p 'test_
     && python -m unittest discover -s container -p 'test_*.py' -q \
     && JULIA_DEPOT_PATH=/opt/workshop/julia-depot \
        julia --threads=1 --startup-file=no --project=oceanbiome \
-       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_response)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_export))'
+       -e 'using MASTSWorkshop, CairoMakie; @assert !isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_response)); @assert !isempty(methods(MASTSWorkshop.plot_parameter_export)); @assert !isempty(methods(MASTSWorkshop.plot_station_forcing)); @assert MASTSWorkshop.column(:NABE).grid.Nz == 60'

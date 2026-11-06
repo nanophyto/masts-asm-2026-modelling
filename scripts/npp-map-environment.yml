@@ -1,0 +1,11 @@
+name: masts-npp-map
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - rasterio
+  - libgdal-hdf4
+  - fiona

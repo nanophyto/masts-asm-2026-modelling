@@ -29,7 +29,7 @@ then choose any self-paced investigation:
 5. **[Remineralisation](generated/03_remineralisation.md):** Where is organic matter recycled?
 6. **[Phytoplankton mortality](generated/06_phytoplankton_mortality.md):** What does stronger virus-like loss do to living and detrital nitrogen?
 
+The [BATS-NABE comparison](generated/07_bats_nabe.md) shows the two North Atlantic sites and compares their idealised
+light and seasonal mixing.
 The [physical-forcing appendix](generated/physical_forcing.md) explains the
-reference light and vertical mixing. A later exercise will compare two
-prepared ocean stations and offer additional stations for rerunning these
-biological experiments under contrasting environments.
+assumptions and grid choices for both reference environments.

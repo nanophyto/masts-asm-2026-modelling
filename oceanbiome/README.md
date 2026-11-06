@@ -58,8 +58,8 @@ for the same core constructors and output-writing conventions.
 
 ## Cycle 1.3: sinking organic-carbon export and budgets
 
-The same `01_grazing.jl` exercise now uses a **500 m, 50-cell** idealised
-column. Export is diagnosed every 50 m from 50 to 500 m; the 100 m
+The `01_grazing.jl` exercise uses a **300 m, 30-cell** idealised
+column. Export is diagnosed every 50 m from 50 to 300 m; the 100 m
 and 300 m horizons coincide with grid faces. For both grazing treatments it saves:
 
 - `control.jld2` and `reduced_grazing.jld2`: Oceananigans tracer profiles.
@@ -97,11 +97,11 @@ uses short two-day model runs to validate scientific and numerical behaviour.
 
 ## Column resolution and time step
 
-The two teaching exercises use **50 cells over 500 m** (10 m spacing),
+The default teaching exercises use **30 cells over 300 m** (10 m spacing),
 a **30-minute time step**, and vertically implicit diffusion.
 Particle sinking remains explicit; the Julia test suite checks its Courant
-number for both grazing configurations. The chosen configuration was validated over a full
-365-day seasonal cycle, including carbon export and nitrogen conservation.
+number for both grazing configurations. The workshop examples run a full
+365-day seasonal cycle, including carbon export and nitrogen conservation diagnostics.
 
 ## Workshop tutorials
 
@@ -134,3 +134,17 @@ DOCS_REUSE_RESULTS=true julia --project=docs docs/make.jl
 ```
 
 This uses the figures and diagnostics under `outputs/oceanbiome/reference_docs/`.
+
+## Idealised Atlantic comparison
+
+The three figures in `07_bats_nabe.jl` compare station locations, seasonal
+PAR and mixing depth, and upper-300 m diffusivity:
+
+```bash
+julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/07_bats_nabe.jl
+```
+
+`MASTSWorkshop.column(:BATS)` and `column(:NABE)` still provide 300 m
+teaching columns and optional stretched 1200 m columns (`deep=true`) for
+biogeochemistry experiments. The comparison page itself only plots the
+prepared physical environments.

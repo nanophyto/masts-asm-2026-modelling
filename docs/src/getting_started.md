@@ -29,6 +29,10 @@ how the model is constructed. The
 [physical-forcing appendix](generated/physical_forcing.md) explains the
 prepared light and mixing conditions used by every exercise.
 
+For the physical setting, see the [BATS and NABE comparison](generated/07_bats_nabe.md)
+for a location map, seasonal light and mixing depth, and upper-300 m
+vertical diffusivity.
+
 The mortality experiment provides a simple analogue of virus-like losses.
 The LOBSTER model has no separate virus population or infection process.
 

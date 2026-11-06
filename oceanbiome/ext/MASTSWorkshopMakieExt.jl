@@ -3,6 +3,8 @@ module MASTSWorkshopMakieExt
 using MASTSWorkshop
 using CairoMakie
 using Oceananigans.Units: days
+using Oceananigans: Center
+using Oceananigans.Grids: znodes
 
 const blue = :steelblue
 const orange = :darkorange
@@ -188,7 +190,7 @@ end
 function MASTSWorkshop.plot_idealised_physics(filename::AbstractString; preview::Bool = isinteractive())
     day_samples = collect(0:5:365)
     times = day_samples .* days
-    depths = collect(range(-500.0, 0.0; length = 101))
+    depths = collect(range(-MASTSWorkshop.column(:BATS).grid.Lz, 0.0; length = 101))
     mixing = [MASTSWorkshop.vertical_diffusivity(z, t) for t in times, z in depths]
 
     figure = Figure(size = (1100, 760), fontsize = 15)
@@ -325,4 +327,235 @@ function MASTSWorkshop.plot_parameter_export(control, changed, filename::Abstrac
     return filename
 end
 
+# North Atlantic locator map. The tiny coastline asset is a clipped, simplified
+# public-domain Natural Earth 1:110m layer, committed for offline docs builds.
+function MASTSWorkshop.plot_station_map(filename::AbstractString; preview::Bool = isinteractive())
+    # Reproducible satellite CAFE NPP map, plotted from numerical monthly data
+    # by scripts/prepare_satellite_npp_map.py. The Natural Earth locator is
+    # retained until the small derived NetCDF and rendered map are generated.
+    npp_map = joinpath(@__DIR__, "..", "..", "data", "maps",
+                       "north_atlantic_cafe_npp_2023.png")
+    if isfile(npp_map)
+        mkpath(dirname(abspath(filename)))
+        abspath(filename) == abspath(npp_map) || cp(npp_map, filename; force = true)
+        return filename
+    end
+    coasts = joinpath(@__DIR__, "..", "..", "data", "maps", "north_atlantic_land.csv")
+    figure = Figure(size = (1150, 650), fontsize = 17)
+    axis = Axis(figure[1, 1]; xlabel = "Longitude (°)", ylabel = "Latitude (°)",
+                aspect = DataAspect(), xticks = -80:20:20, yticks = 10:10:70,
+                backgroundcolor = :aliceblue)
+    points = Point2f[]
+    function land!()
+        if length(points) >= 3
+            poly!(axis, copy(points); color = :gray90,
+                  strokecolor = :gray65, strokewidth = 0.7)
+        end
+        empty!(points)
+    end
+    for line in eachline(coasts)
+        s = strip(line)
+        if isempty(s)
+            land!()
+        elseif !startswith(s, "#")
+            lon, lat = parse.(Float32, split(s, ','))
+            push!(points, Point2f(lon, lat))
+        end
+    end
+    land!()
+    scatter!(axis, [-64.17, -20.0], [31.67, 47.0]; color = [:steelblue, :darkorange],
+             markersize = 23, strokewidth = 2, strokecolor = :white)
+    text!(axis, -64.17, 31.67; text = "BATS", color = :steelblue,
+          fontsize = 21, offset = (12, -10), align = (:left, :center))
+    text!(axis, -20.0, 47.0; text = "NABE", color = :darkorange,
+          fontsize = 21, offset = (12, 12), align = (:left, :center))
+    xlims!(axis, -91, 18)
+    ylims!(axis, 8, 68)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
 end
+
+# Two physical inputs used by the classroom BATS and NABE columns.
+function MASTSWorkshop.plot_station_forcing(filename::AbstractString; preview::Bool = isinteractive())
+    day = collect(0:2:365)
+    time = day .* days
+    figure = Figure(size = (1380, 560), fontsize = 17)
+
+    light = Axis(figure[1, 1]; title = "Surface PAR", xlabel = "Day of year", ylabel = "W m⁻²")
+    lines!(light, day, MASTSWorkshop.surface_PAR.(time);
+           color = blue, linewidth = 3, label = "BATS")
+    lines!(light, day, MASTSWorkshop.nabe_surface_PAR.(time);
+           color = orange, linewidth = 3, label = "NABE")
+    axislegend(light; position = :rt, framevisible = false)
+
+    mixing = Axis(figure[1, 2]; title = "Prescribed mixing depth",
+                  xlabel = "Day of year", ylabel = "Depth (m)")
+    lines!(mixing, day, MASTSWorkshop.mixed_layer_depth.(time);
+           color = blue, linewidth = 3, label = "BATS")
+    lines!(mixing, day, MASTSWorkshop.nabe_mixed_layer_depth.(time);
+           color = orange, linewidth = 3, label = "NABE")
+    ylims!(mixing, -230, 0)
+    axislegend(mixing; position = :lb, framevisible = false)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+# Upper 300 m of seasonal idealised vertical tracer diffusivity.
+function MASTSWorkshop.plot_station_diffusivity(filename::AbstractString;
+                                                preview::Bool = isinteractive())
+    day = collect(0:2:365)
+    time = day .* days
+    grid = MASTSWorkshop.column(:BATS; deep = true).grid
+    z = [depth for depth in znodes(grid, Center()) if depth >= -300]
+    figure = Figure(size = (1430, 610), fontsize = 17)
+    for (i, station) in enumerate((:BATS, :NABE))
+        axis = Axis(figure[1, i]; title = string(station), xlabel = "Day of year",
+                    ylabel = "Depth (m)")
+        kappa = [MASTSWorkshop.vertical_diffusivity(station, depth, t)
+                 for t in time, depth in z]
+        hm = heatmap!(axis, day, z, kappa;
+                      colormap = :viridis, colorscale = log10,
+                      colorrange = (1e-4, 1.1e-2))
+        mld = [MASTSWorkshop.mixed_layer_depth(station, t) for t in time]
+        lines!(axis, day, mld; color = :white, linewidth = 2.5)
+        lines!(axis, day, mld; color = :black, linestyle = :dash, linewidth = 1)
+        ylims!(axis, -300, 0)
+        if i == 2
+            Colorbar(figure[1, 3], hm; label = "Kz (m² s⁻¹)",
+                     ticks = [1e-4, 1e-3, 1e-2])
+        end
+    end
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+# Observed monthly *means only* are plotted over the smooth idealised
+# seasonal forcing. Positive-down depths increase downwards in both panels.
+# The complete GOSML distribution remains available in the source CSV.
+function MASTSWorkshop.plot_mld_comparison(comparison, filename::AbstractString;
+                                           preview::Bool = isinteractive())
+    stations = (:BATS, :NABE)
+    deepest = maximum(max(maximum(getproperty(comparison, station).observed_mean),
+                          maximum(getproperty(comparison, station).model_daily))
+                      for station in stations)
+    limit = max(250.0, 50 * ceil(deepest / 50))
+    figure = Figure(size = (1450, 650), fontsize = 15)
+    Label(figure[0, 1:2], "Observed mean vs idealised mixed-layer depth: BATS and NABE";
+          fontsize = 22, font = :bold)
+    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    legend_entries = nothing
+    legend_labels = ["Idealised forcing", "GOSML monthly mean"]
+    for (column, station) in enumerate(stations)
+        data = getproperty(comparison, station)
+        axis = Axis(figure[1, column]; title = string(station), xlabel = "Month",
+                    ylabel = "Mixed-layer depth (m; negative down)",
+                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4)
+        idealised = lines!(axis, data.month_x, .-data.model_daily;
+                           color = :orangered, linewidth = 3)
+        observed = scatter!(axis, data.months, .-data.observed_mean;
+                            color = :royalblue, marker = :circle, markersize = 12)
+        isnothing(legend_entries) && (legend_entries = [idealised, observed])
+        xlims!(axis, 0.5, 12.5)
+        ylims!(axis, -limit, 0)
+    end
+    Legend(figure[2, 1:2], legend_entries, legend_labels;
+           orientation = :horizontal, framevisible = true,
+           tellwidth = false, tellheight = true)
+    Label(figure[3, 1:2],
+          "NOAA GOSML (Johnson & Lyman, 2022): points are observed monthly means; " *
+          "lines are the prescribed daily forcing.";
+          fontsize = 12)
+    rowsize!(figure.layout, 2, Auto())
+    rowsize!(figure.layout, 3, Auto())
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+# NASA POWER point climatology: blue observed monthly-mean points and smooth,
+# observationally fitted daily-mean forcing, on a common W/m^2 scale.
+function MASTSWorkshop.plot_par_comparison(comparison, filename::AbstractString;
+                                           preview::Bool = isinteractive())
+    stations = (:BATS, :NABE)
+    maximum_PAR = maximum(max(maximum(getproperty(comparison, station).observed_mean),
+                              maximum(getproperty(comparison, station).model_daily))
+                          for station in stations)
+    limit = max(50.0, 25 * ceil(1.12 * maximum_PAR / 25))
+    figure = Figure(size = (1450, 650), fontsize = 15)
+    Label(figure[0, 1:2], "Observed mean vs idealised surface PAR: BATS and NABE";
+          fontsize = 22, font = :bold)
+    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    legend_entries = nothing
+    for (column, station) in enumerate(stations)
+        data = getproperty(comparison, station)
+        axis = Axis(figure[1, column]; title = string(station), xlabel = "Month",
+                    ylabel = "Daily-mean PAR (W m⁻²)",
+                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4)
+        idealised = lines!(axis, data.month_x, data.model_daily;
+                           color = :orangered, linewidth = 3)
+        observed = scatter!(axis, data.months, data.observed_mean;
+                            color = :royalblue, markersize = 12)
+        isnothing(legend_entries) && (legend_entries = [idealised, observed])
+        xlims!(axis, 0.5, 12.5)
+        ylims!(axis, 0, limit)
+    end
+    Legend(figure[2, 1:2], legend_entries, ["Idealised forcing", "NASA POWER monthly mean"];
+           orientation = :horizontal, framevisible = false, tellwidth = false)
+    Label(figure[3, 1:2],
+          "NASA POWER / CERES (2001–2020): points are observed monthly means; " *
+          "lines are smooth daily-mean forcing."; fontsize = 12)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+# Compare the two annual ecosystem references on the same deep grid.
+function MASTSWorkshop.plot_station_comparison(bats, nabe, filename::AbstractString;
+                                              preview::Bool = isinteractive())
+    matching_times(bats, nabe)
+    isnothing(bats.export_1000) && throw(ArgumentError("BATS must use the deep grid"))
+    isnothing(nabe.export_1000) && throw(ArgumentError("NABE must use the deep grid"))
+
+    figure = Figure(size = (1250, 860), fontsize = 15)
+    Label(figure[0, :], "Idealised BATS and NABE: annual ecosystem response";
+          fontsize = 22, font = :bold)
+    for (column, title, metric) in ((1, "Top 10 m phytoplankton", d -> d.surface_P),
+                                    (2, "Top 10 m nitrate", d -> d.surface_NO₃))
+        axis = Axis(figure[1, column]; title, xlabel = "Day", ylabel = "mmol N m⁻³")
+        lines!(axis, bats.day, metric(bats); color = blue, linewidth = 2.5, label = "BATS")
+        lines!(axis, nabe.day, metric(nabe); color = orange, linewidth = 2.5, label = "NABE")
+        axislegend(axis; position = :rt, framevisible = false)
+    end
+
+    attenuation = Axis(figure[2, 1]; title = "Late-season particle flux attenuation",
+                       xlabel = "F(z) / F(100)", ylabel = "Depth (m)")
+    for (station, data, color) in (("BATS", bats, blue), ("NABE", nabe, orange))
+        profile = data.export_profile
+        index = findfirst(==(100), profile.depths)
+        reference = profile.mean_daily_mg_C[index]
+        if reference > 0
+            selected = findall(d -> 100 <= d <= 1000, profile.depths)
+            lines!(attenuation, profile.mean_daily_mg_C[selected] ./ reference,
+                   .-profile.depths[selected]; color, linewidth = 2.5, label = station)
+        end
+    end
+    axislegend(attenuation; position = :rt, framevisible = false)
+
+    deep_export = Axis(figure[2, 2]; title = "Cumulative POC export at 1000 m",
+                       xlabel = "Day", ylabel = "g C m⁻²")
+    lines!(deep_export, bats.day, bats.export_1000.cumulative_g_C;
+           color = blue, linewidth = 2.5, label = "BATS")
+    lines!(deep_export, nabe.day, nabe.export_1000.cumulative_g_C;
+           color = orange, linewidth = 2.5, label = "NABE")
+    axislegend(deep_export; position = :lt, framevisible = false)
+    save(filename, figure)
+    preview && display(figure)
+    return filename
+end
+
+end # module MASTSWorkshopMakieExt

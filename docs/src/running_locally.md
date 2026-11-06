@@ -86,8 +86,8 @@ All seven scripts generate JLD2 tracer profiles, diagnostic CSVs and PNG figures
 under `workshop/results/oceanbiome/`, in their own experiment directories.
 The first plot may take longer while CairoMakie loads.
 
-The Julia exercises use 50 vertical cells over 500 m, a 30-minute time step,
-vertically implicit mixing and a 365-day seasonal simulation.
+The default Julia exercises use 30 vertical cells over 300 m, a 30-minute time step,
+vertically implicit mixing and a 365-day seasonal simulation. The BATS/NABE comparison plots the two prescribed physical environments.
 
 ## Run the workshop image with Docker
 
@@ -121,3 +121,19 @@ the [grazing experiment](generated/01_grazing.md),
 [nutrient affinity](generated/05_nutrient_affinity.md),
 [phytoplankton mortality](generated/06_phytoplankton_mortality.md), or the
 [physical-forcing appendix](generated/physical_forcing.md).
+
+## Preparing the BATS/NABE observational references
+
+The full documentation build compares GOSML mixed-layer depth and NASA POWER
+surface PAR at BATS and NABE. Generate both committed observational references
+using the isolated `masts-gosml` Conda environment:
+
+```bash
+conda env create -f scripts/gosml-environment.yml
+conda run -n masts-gosml python scripts/prepare_mld_climatology.py
+conda run -n masts-gosml python scripts/prepare_par_climatology.py
+```
+
+The PAR script also updates the compiled Julia forcing coefficients. Commit the
+small CSV/JSON references and generated coefficient file to make builds
+reproducible on GitHub Actions and workshop workstations.

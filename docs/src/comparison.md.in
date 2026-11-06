@@ -1,0 +1,26 @@
+# BATS and NABE
+
+BATS is a subtropical North Atlantic site; NABE represents the temperate
+North Atlantic. Their seasonal light and mixing differ.
+
+## 1. Locations
+
+The station map uses the annual-mean **VIIRS CAFE** net primary production field
+for **2023**, masked to **open-ocean waters deeper than 200 m** so the colour
+background emphasises the basin-scale Atlantic structure rather than shelves and
+coasts.
+
+WORKSHOP_STATION_MAP_FIGURE
+
+WORKSHOP_STATION_MAP_CREDIT
+
+## 2. Idealised PAR and mixing depth
+
+WORKSHOP_STATION_FORCING_FIGURE
+
+## 3. Idealised vertical diffusivity
+
+The depth–time plots show the upper **300 m**. The dashed line marks the
+prescribed mixing depth.
+
+WORKSHOP_STATION_DIFFUSIVITY_FIGURE

@@ -56,6 +56,7 @@ end
 
 reference_dir = joinpath(output_base, "reference_column")
 grazing_dir = joinpath(output_base, "grazing")
+station_dir = joinpath(output_base, "bats_nabe")
 parameter_exercises = (("02_sinking.jl", "sinking", "slow_sinking"),
                        ("03_remineralisation.jl", "remineralisation", "fast_remineralisation"),
                        ("04_light_affinity.jl", "light_affinity", "higher_light_affinity"),
@@ -90,13 +91,33 @@ for (script, experiment, _) in parameter_exercises
     parameter_outputs[experiment] = (quick || reuse_results || content_only) ? nothing : run_exercise(script, joinpath(output_base, experiment))
 end
 
-# The physics diagram belongs to the appendix; the reference exercise
-# concentrates on simulation results and its five scientific figures.
-physics_figure = joinpath(reference_dir, "reference_physics.png")
-if !content_only && !isfile(physics_figure)
-    mkpath(reference_dir)
-    code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_idealised_physics(ARGS[1]; preview=false)"
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $physics_figure`)
+# The BATS/NABE comparison is now three quick physical-forcing figures;
+# there are no station ecosystem runs or observational statistics on this page.
+if !(quick || reuse_results || content_only)
+    run_exercise("07_bats_nabe.jl", station_dir)
+end
+if reuse_results && !content_only
+    mkpath(station_dir)
+    code = "using MASTSWorkshop, CairoMakie; " *
+           "MASTSWorkshop.plot_station_map(ARGS[1]; preview=false); " *
+           "MASTSWorkshop.plot_station_forcing(ARGS[2]; preview=false); " *
+           "MASTSWorkshop.plot_station_diffusivity(ARGS[3]; preview=false)"
+    files = [joinpath(station_dir, name) for name in
+             ("station_map.png", "station_forcing.png", "station_diffusivity.png")]
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $(files...)`)
+end
+
+# Optional instructor physics files: regenerate appendix Figures 1 and 2 from
+# saved CATKE runs when available. Otherwise, the committed reference figures
+# make the published documentation self-contained and offline-buildable.
+bats_physics = joinpath(root, "outputs", "physics", "bats_catke_spin365d_365d.jld2")
+nabe_physics = joinpath(root, "outputs", "physics", "nabe_catke_spin365d_365d.jld2")
+if !content_only && !quick && isfile(bats_physics) && isfile(nabe_physics)
+    script = joinpath(root, "physics", "plot_appendix_physics.jl")
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $bats_physics $nabe_physics $(joinpath(assets_dir, "numericalearth_inputs.png")) $(joinpath(assets_dir, "numericalearth_diffusivity.png"))`)
+end
+for name in ("numericalearth_inputs.png", "numericalearth_diffusivity.png")
+    check_png(joinpath(assets_dir, name))
 end
 
 figures = (
@@ -105,15 +126,17 @@ figures = (
     (reference_dir, "reference_living_fraction.png"),
     (reference_dir, "reference_carbon_export.png"),
     (reference_dir, "reference_martin_curve.png"),
-    (reference_dir, "reference_physics.png"),
     (grazing_dir, "grazing_response.png"),
     (grazing_dir, "grazing_plankton_balance.png"),
     (grazing_dir, "carbon_export.png"),
 )
 parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(kind).png")
                           for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
+station_figures = ((station_dir, "station_map.png"),
+                   (station_dir, "station_forcing.png"),
+                   (station_dir, "station_diffusivity.png"))
 if !content_only
-    for (directory, filename) in (quick ? figures : (figures..., parameter_figures...))
+    for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
         check_png(joinpath(directory, filename))
         if !quick
             cp(joinpath(directory, filename), joinpath(assets_dir, filename); force = true)
@@ -123,7 +146,7 @@ end
 
 function write_result_assets(prefix, output, checks)
     (quick || content_only) && return
-    figure_names = last.((figures..., parameter_figures...))
+    figure_names = last.((figures..., parameter_figures..., station_figures...))
     if !isnothing(output)
         log_lines = filter(line -> !any(name -> occursin(name, line), figure_names),
                            split(output, '\n'))
@@ -171,7 +194,7 @@ function asset_text(filename)
 end
 function figure_block(filename, caption)
     path = joinpath(assets_dir, filename)
-    if !isfile(path) && !quick
+    if !isfile(path) && !quick && !content_only
         error("Missing documentation figure: $(path). Run a full documentation build to generate it.")
     end
     isfile(path) ? "![$caption](../assets/$filename)" : "**$caption:** $reference_note"
@@ -191,7 +214,7 @@ make_tutorial("00_reference_column.jl", (
     "WORKSHOP_REFERENCE_PARTITION_FIGURE" => figure_block("reference_nitrogen_partition.png", "Upper 100 m nitrogen inventories and fractions"),
     "WORKSHOP_REFERENCE_LIVING_FIGURE" => figure_block("reference_living_fraction.png", "Living particulate and dissolved-organic nitrogen fractions"),
     "WORKSHOP_REFERENCE_EXPORT_FIGURE" => figure_block("reference_carbon_export.png", "Daily and cumulative carbon export from the reference column"),
-    "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–500 m and Martin-curve comparison"),
+    "WORKSHOP_REFERENCE_MARTIN_FIGURE" => figure_block("reference_martin_curve.png", "Export profiles at 50–300 m and Martin-curve comparison"),
     "WORKSHOP_REFERENCE_BUDGET_CHECK" => asset_text("reference_column_budget.md"),
 ))
 
@@ -212,12 +235,41 @@ for (script, experiment, _) in parameter_exercises
     ))
 end
 
-# The appendix is a template: Documenter should process only its generated
-# copy, where the relative links to both tutorials are correct.
+# The published BATS/NABE comparison is a concise three-figure page, with
+# plots built by 07_bats_nabe.jl; the plotting script is still runnable.
+station_page = joinpath(@__DIR__, "src", "comparison.md.in")
+has_npp_map = isfile(joinpath(root, "data", "maps", "north_atlantic_cafe_npp_2023.png"))
+station_map_credit = if has_npp_map
+    "<small>2023 annual-mean satellite-derived NPP (VIIRS CAFE), masked to open-ocean water deeper than 200 m: " *
+    "[Ocean Productivity](https://orca.science.oregonstate.edu/npp_products.php); " *
+    "[Silsbe et al. (2016)](https://doi.org/10.1002/2016GB005521); " *
+    "Natural Earth bathymetry. Calculated from the monthly numerical data with `scripts/prepare_satellite_npp_map.py`.</small>"
+else
+    "<small>Locator map using [Natural Earth](https://www.naturalearthdata.com/) coastlines. " *
+    "Generate the satellite NPP map using `scripts/prepare_satellite_npp_map.py`.</small>"
+end
+write(joinpath(generated_dir, "07_bats_nabe.md"),
+      replace(read(station_page, String),
+              "WORKSHOP_STATION_MAP_CREDIT" => station_map_credit,
+              "WORKSHOP_STATION_MAP_FIGURE" =>
+                  figure_block("station_map.png", has_npp_map ?
+                               "BATS and NABE on the 2023 annual-mean satellite NPP map" :
+                               "BATS and NABE in the North Atlantic"),
+              "WORKSHOP_STATION_FORCING_FIGURE" =>
+                  figure_block("station_forcing.png", "Prescribed PAR and seasonal mixing depth"),
+              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
+                  figure_block("station_diffusivity.png", "Idealised diffusivity in the upper 300 m")))
+
+# Short appendix: physical inputs, CATKE diffusivity, idealised diffusivity.
 physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
 write(joinpath(generated_dir, "physical_forcing.md"),
       replace(read(physics_src, String),
-              "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity")))
+              "WORKSHOP_NUMERICALEARTH_INPUTS_FIGURE" =>
+                  figure_block("numericalearth_inputs.png", "NumericalEarth wind-driven currents and hydrography"),
+              "WORKSHOP_NUMERICALEARTH_DIFFUSIVITY_FIGURE" =>
+                  figure_block("numericalearth_diffusivity.png", "CATKE seasonal tracer diffusivity"),
+              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
+                  figure_block("station_diffusivity.png", "Idealised seasonal tracer diffusivity")))
 
 makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",
@@ -228,6 +280,7 @@ makedocs(
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
         "Reference column" => "generated/00_reference_column.md",
+        "BATS and NABE comparison" => "generated/07_bats_nabe.md",
         "Parameter experiments" => [
             "Light affinity" => "generated/04_light_affinity.md",
             "Nutrient affinity" => "generated/05_nutrient_affinity.md",

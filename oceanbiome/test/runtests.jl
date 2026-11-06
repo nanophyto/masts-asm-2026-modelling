@@ -14,25 +14,56 @@ using MASTSWorkshop: surface_PAR, mixed_layer_depth, vertical_diffusivity, initi
     @test Base.pkgversion(Oceananigans) == v"0.114.1"
     @test only(p.version for p in values(Pkg.dependencies()) if p.name == "CairoMakie") == v"0.15.16"
     @test Meta.parseall(read(joinpath(@__DIR__, "..", "ext", "MASTSWorkshopMakieExt.jl"), String)) isa Expr
+    for name in ("generate_column.jl", "test_offline_biology.jl", "plot_diffusivity.jl", "plot_velocity_diagnostics.jl", "fit_smooth_diffusivity.jl", "smooth_diffusivity_fit.jl")
+        @test Meta.parseall(read(joinpath(@__DIR__, "..", "..", "physics", name), String)) isa Expr
+    end
     @test hasmethod(MASTSWorkshop.analyse_column_output, Tuple{String, Any})
     for name in ("02_sinking.jl", "03_remineralisation.jl", "04_light_affinity.jl",
-                 "05_nutrient_affinity.jl", "06_phytoplankton_mortality.jl")
+                 "05_nutrient_affinity.jl", "06_phytoplankton_mortality.jl",
+                 "07_bats_nabe.jl")
         path = joinpath(@__DIR__, "..", "..", "workshop", "01_OceanBioME", name)
         @test Meta.parseall(read(path, String)) isa Expr
     end
 end
 
-include("plot_preview.jl")
-
 using Oceananigans.Fields: interior
+using Oceananigans.Grids: znodes
 using Oceananigans.Units
+
+include("mld_comparison_tests.jl")
+include("par_comparison_tests.jl")
+include("offline_physics_tests.jl")
+include(joinpath(@__DIR__, "..", "..", "physics", "test_smooth_diffusivity_fit.jl"))
+include("plot_preview.jl")
 
 @testset "Idealised physical forcing" begin
     @test surface_PAR(0, 0, 180days) > surface_PAR(0, 0, 0)
     @test surface_PAR(180days) == surface_PAR(0, 0, 180days)
+    @test MASTSWorkshop.par_calibrated() isa Bool
     @test mixed_layer_depth(0) < mixed_layer_depth(180days)
     @test vertical_diffusivity(-5, 0) > vertical_diffusivity(-190, 0)
     @test vertical_diffusivity(-5, 0) == vertical_diffusivity(0, 0, -5, 0)
+    for (station, par, mld, mixing) in
+        ((:BATS, surface_PAR, mixed_layer_depth, vertical_diffusivity),
+         (:NABE, MASTSWorkshop.nabe_surface_PAR, MASTSWorkshop.nabe_mixed_layer_depth,
+                 MASTSWorkshop.nabe_vertical_diffusivity))
+        @test surface_PAR(station, 180days) == par(180days)
+        @test mixed_layer_depth(station, 180days) == mld(180days)
+        @test vertical_diffusivity(station, -5, 180days) == mixing(-5, 180days)
+        for time in (0, 45, 90, 135, 180, 225, 270, 315) .* days
+            @test isfinite(surface_PAR(station, time)) && surface_PAR(station, time) > 0
+            @test surface_PAR(station, time) ≈ surface_PAR(station, time + 365days)
+            @test -1200 < mixed_layer_depth(station, time) < 0
+            @test isfinite(vertical_diffusivity(station, -5, time)) &&
+                  vertical_diffusivity(station, -5, time) > 0
+        end
+    end
+    @test_throws ArgumentError mixed_layer_depth(:UNKNOWN, 0)
+    @test all(-last(znodes(MASTSWorkshop.column(station; deep).grid, Center())) ≈ 5
+              for station in (:BATS, :NABE), deep in (false, true))
+    @test all(vertical_diffusivity(station, -100, 0) >
+              vertical_diffusivity(station, -100, 180days)
+              for station in (:BATS, :NABE))
 end
 
 @testset "Workshop output directory" begin
@@ -50,7 +81,8 @@ end
     @test time_step == 30minutes
     @test keys(configuration) == (:grid, :time_step, :initial, :closure, :surface_PAR)
     @test light === surface_PAR
-    @test initial == initial_conditions()
+    @test grid.Nz == 30 && grid.Lz == 300
+    @test initial.NO₃(-5) ≈ MASTSWorkshop.deep_bats_initial_conditions().NO₃(-5)
     @test_throws ArgumentError MASTSWorkshop.column(:UNKNOWN)
 
     # Exercise the same native constructors and forcing as the teaching example.
@@ -170,5 +202,84 @@ end
                   make_model(phyto = low_nutrients), make_model(phyto = mortality))
         run!(Simulation(model; Δt = time_step, stop_time = 2days))
         @test all(tracer -> all(isfinite, interior(tracer)), values(model.tracers))
+    end
+end
+
+@testset "BATS/NABE shallow and stretched deep columns" begin
+    faces = MASTSWorkshop.deep_grid_faces()
+    @test length(faces) == 61
+    @test first(faces) == -1200.0 && last(faces) == 0.0
+    @test all(diff(faces) .> 0)
+    @test extrema(diff(faces)) == (10.0, 40.0)
+    @test all(depth -> -depth in faces, (100, 300, 1000))
+
+    for (station, expected_light) in ((:BATS, surface_PAR),
+                                      (:NABE, MASTSWorkshop.nabe_surface_PAR))
+        shallow = MASTSWorkshop.column(station)
+        deep = MASTSWorkshop.column(station; deep = true)
+        @test shallow.grid.Nz == 30 && shallow.grid.Lz == 300
+        @test deep.grid.Nz == 60 && deep.grid.Lz == 1200
+        @test shallow.time_step == deep.time_step == 30minutes
+        @test shallow.surface_PAR === deep.surface_PAR === expected_light
+        @test (face_index(shallow.grid, 100), face_index(shallow.grid, 300)) == (21, 1)
+        @test (face_index(deep.grid, 100), face_index(deep.grid, 300),
+               face_index(deep.grid, 1000)) == (51, 31, 6)
+        @test_throws ArgumentError face_index(deep.grid, 350)
+        @test_throws ArgumentError face_index(deep.grid, 1250)
+        @test_throws ArgumentError face_index(shallow.grid, 1000)
+
+        # Oceananigans calls each initial profile with only z for Flat/Flat grids.
+        for name in (:NO₃, :NH₄, :P, :Z, :DOM, :sPOM, :bPOM)
+            @test all(z -> isfinite(shallow.initial[name](z)) &&
+                           shallow.initial[name](z) >= 0, (-299.0, -150.0, -5.0))
+            @test deep.initial[name](-5.0) ≈ shallow.initial[name](-5.0)
+        end
+        @test shallow.initial.NO₃(-280) > shallow.initial.NO₃(-5)
+        @test shallow.initial.NO₃(0, 0, -5) == shallow.initial.NO₃(-5)
+        @test deep.initial.P(-1000) < deep.initial.P(-5)
+    end
+    # Table-driven seasonal checks keep the station-specific tests concise.
+    for (station, winter_day, winter_min, winter_max, summer_min, summer_max) in
+        ((:BATS, 15, 85, 105, 10, 30), (:NABE, 45, 175, 205, 15, 40))
+        @test winter_min < -mixed_layer_depth(station, winter_day * days) < winter_max
+        @test summer_min < -mixed_layer_depth(station, 180days) < summer_max
+        @test mixed_layer_depth(station, 0) ≈ mixed_layer_depth(station, 365days)
+    end
+    @test MASTSWorkshop.nabe_mixed_layer_depth(45days) < MASTSWorkshop.nabe_mixed_layer_depth(0)
+    @test MASTSWorkshop.nabe_mixed_layer_depth(0) < mixed_layer_depth(0)
+    @test MASTSWorkshop.nabe_surface_PAR(180days) > MASTSWorkshop.nabe_surface_PAR(0)
+    @test MASTSWorkshop.column(:NABE).initial.NO₃(-5) > MASTSWorkshop.column(:BATS).initial.NO₃(-5)
+
+    # Nonuniform inventories use local cell thickness, not Lz/Nz.
+    synthetic = (; (name => fill(2.0, 60, 3) for name in
+                     (:NO₃, :NH₄, :P, :Z, :DOM, :sPOM, :bPOM))...)
+    widths = diff(faces)
+    partition = upper_nitrogen_partition(synthetic, widths, 51)
+    @test partition.total == fill(1400.0, 3)  # 7 pools * 2 mmol/m3 * 100 m
+    @test_throws DimensionMismatch upper_nitrogen_partition(synthetic, [10.0], 51)
+
+    # Run every station/depth combination, including the shallow NABE winter.
+    for station in (:BATS, :NABE), deep in (false, true)
+        grid, dt, initial, closure, light = MASTSWorkshop.column(station; deep)
+        bgc = LOBSTER(grid; surface_PAR = light, scale_negatives = true)
+        model = NonhydrostaticModel(grid; closure, biogeochemistry = bgc)
+        set!(model; initial...)
+        @test sinking_courant(model, dt) < 1
+        mktempdir() do dir
+            filename = joinpath(dir, "$(station)_$(deep ? "deep" : "shallow").jld2")
+            sim = Simulation(model; Δt = dt, stop_time = 2days)
+            sim.output_writers[:profiles] = JLD2Writer(model, model.tracers;
+                filename, schedule = TimeInterval(1day), overwrite_files = true)
+            run!(sim)
+            @test all(tracer -> all(isfinite, interior(tracer)), values(model.tracers))
+            result = MASTSWorkshop.analyse_column_output(filename, model)
+            @test length(result.z) == grid.Nz
+            @test isnothing(result.export_1000) == !deep
+            @test (100 in result.export_profile.depths) && (300 in result.export_profile.depths)
+            @test !deep || (1000 in result.export_profile.depths)
+            @test all(isfinite, result.nitrogen_inventory)
+            @test isapprox(first(result.export_profile.depths), 50; atol = 1e-8)
+            @test maximum(abs, result.budget_residual) / first(result.nitrogen_inventory) < 0.05
+        end
     end
 end

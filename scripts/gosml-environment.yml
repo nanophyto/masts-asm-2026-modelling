@@ -1,0 +1,12 @@
+# Isolated data-preparation environment for PR2 (NOAA GOSML).
+# Create once with: conda env create -f scripts/gosml-environment.yml
+name: masts-gosml
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - xarray
+  - netcdf4

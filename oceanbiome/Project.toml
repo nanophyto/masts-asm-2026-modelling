@@ -6,6 +6,7 @@ version = "0.1.0"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 OceanBioME = "a49af516-9db8-4be4-be45-1dad61c5a376"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 # Plotting methods are activated only when CairoMakie is loaded.
 # CairoMakie is a regular dependency of the workshop environment.

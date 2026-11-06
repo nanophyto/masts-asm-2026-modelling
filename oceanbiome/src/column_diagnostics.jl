@@ -1,6 +1,7 @@
 module ColumnDiagnostics
 
-using Oceananigans: FieldTimeSeries
+using Oceananigans: FieldTimeSeries, Center, Face
+using Oceananigans.Grids: znodes
 using Oceananigans.Biogeochemistry: biogeochemical_drift_velocity
 using Oceananigans.Units: days
 
@@ -14,23 +15,21 @@ const carbon_to_nitrogen = 106 / 16  # mol C per mol N (fixed Redfield ratio)
 const carbon_molar_mass = 12.011     # mg C per mmol C
 const tracers = (:NO₃, :NH₄, :P, :Z, :DOM, :sPOM, :bPOM)
 
-# The 1D teaching grid is uniform, with its surface at z = 0.
-# A downward flux at face k uses the concentration in cell k immediately above it.
+# A downward flux at face k uses the concentration in cell k immediately
+# above it. Works for both uniformly spaced and vertically stretched grids.
 function face_index(grid, depth)
-    Δz = grid.Lz / grid.Nz
-    depth > 0 && depth <= grid.Lz || throw(ArgumentError("depth must be inside the column"))
-    steps = round(Int, depth / Δz)
-    isapprox(steps * Δz, depth; atol = 1e-8) ||
-        throw(ArgumentError("export depth $depth m must coincide with a grid face"))
-    return grid.Nz + 1 - steps
+    0 < depth <= grid.Lz || throw(ArgumentError("depth must be inside the column"))
+    index = findfirst(z -> isapprox(z, -depth; atol = 1e-8), znodes(grid, Face()))
+    isnothing(index) && throw(ArgumentError("export depth $depth m must coincide with a grid face"))
+    return index
 end
 
 # Particle sinking remains explicit even with vertically implicit mixing.
 # A Courant number above one signals a likely sinking-advection time-step issue.
 function sinking_courant(model, dt)
-    dz = model.grid.Lz / model.grid.Nz
+    dz_min = minimum(diff(collect(znodes(model.grid, Face()))))
     return maximum(abs(biogeochemical_drift_velocity(model.biogeochemistry, Val(name)).w[1, 1, k])
-                   for name in (:sPOM, :bPOM) for k in 1:(model.grid.Nz + 1)) * dt / dz
+                   for name in (:sPOM, :bPOM) for k in 1:(model.grid.Nz + 1)) * dt / dz_min
 end
 
 # Concentrations in mmol N/m³, face velocities in m/s (negative is downward).
@@ -97,7 +96,10 @@ end
 # The resulting inventories are in mmol N/m², integrated above a grid face.
 function upper_nitrogen_partition(vertical, Δz, top_face)
     1 <= top_face <= size(vertical.P, 1) || throw(ArgumentError("invalid upper-column face"))
-    inventory(name) = Δz .* vec(sum(vertical[name][top_face:end, :]; dims = 1))
+    widths = Δz isa Number ? fill(Δz, size(vertical.P, 1)) : Δz
+    length(widths) == size(vertical.P, 1) || throw(DimensionMismatch("cell widths and profile dimensions differ"))
+    weights = reshape(widths[top_face:end], :, 1)
+    inventory(name) = vec(sum(vertical[name][top_face:end, :] .* weights; dims = 1))
 
     phytoplankton = inventory(:P)
     zooplankton = inventory(:Z)
@@ -127,8 +129,9 @@ function analyse_column_output(filename, model)
     surface_NO₃ = surface_tracer(:NO₃)
 
     # Area-normalised total nitrogen inventory (mmol N/m²), all seven pools.
-    Δz = grid.Lz / grid.Nz
-    z = [-grid.Lz + (k - 0.5) * Δz for k in 1:grid.Nz]
+    faces = collect(znodes(grid, Face()))
+    Δz = diff(faces)
+    z = collect(znodes(grid, Center()))
     vertical = (; (name => vertical_tracer(name) for name in tracers)...)
     for (name, values) in pairs(vertical)
         all(isfinite, values) || error("Non-finite $name concentration in $filename")
@@ -136,9 +139,9 @@ function analyse_column_output(filename, model)
     end
     vertical_P, vertical_Z, vertical_NO₃ = vertical.P, vertical.Z, vertical.NO₃
     vertical_sPOM, vertical_bPOM, vertical_DOM = vertical.sPOM, vertical.bPOM, vertical.DOM
-    nitrogen_inventory = Δz .* vec(sum(vertical.NO₃ .+ vertical.NH₄ .+
-                                      vertical.P .+ vertical.Z .+ vertical.DOM .+
-                                      vertical.sPOM .+ vertical.bPOM; dims = 1))
+    nitrogen_inventory = vec(sum((vertical.NO₃ .+ vertical.NH₄ .+
+                                  vertical.P .+ vertical.Z .+ vertical.DOM .+
+                                  vertical.sPOM .+ vertical.bPOM) .* reshape(Δz, :, 1); dims = 1))
     upper_100m = upper_nitrogen_partition(vertical, Δz, face_index(grid, 100))
     living_fraction = living_particulate_fraction(vertical_P, vertical_Z,
                                                   vertical_sPOM, vertical_bPOM)
@@ -158,11 +161,16 @@ function analyse_column_output(filename, model)
 
     export_100 = export_at(100)
     export_300 = export_at(300)
+    export_1000 = grid.Lz >= 1000 ? export_at(1000) : nothing
     bottom = export_at(grid.Lz)
     bottom_loss = cumulative_trapezoid(times, bottom.nitrogen_flux)
 
-    # Export at every 50 m down to the bottom, using the same face-flux diagnostic.
-    depths = collect(50:50:floor(Int, grid.Lz))
+    # Export at 50 m increments wherever those depths coincide with grid faces.
+    # 100 and 1000 m are intentionally represented in the stretched grid.
+    candidate_depths = 50:50:floor(Int, grid.Lz)
+    depths = [depth for depth in candidate_depths
+              if any(z -> isapprox(z, -depth; atol = 1e-8), faces)]
+    grid.Lz in depths || push!(depths, grid.Lz)
     fluxes = [depth == 100 ? export_100 : depth == 300 ? export_300 :
               depth == grid.Lz ? bottom : export_at(depth) for depth in depths]
 
@@ -185,28 +193,34 @@ function analyse_column_output(filename, model)
               vertical_P, vertical_Z, vertical_NO₃,
               vertical_sPOM, vertical_bPOM, vertical_DOM,
               upper_100m, living_fraction, dissolved_fraction,
-              surface_P, surface_NO₃, export_100, export_300, export_profile,
+              surface_P, surface_NO₃, export_100, export_300, export_1000, export_profile,
               nitrogen_inventory, bottom_loss, budget_residual)
 end
 
 function write_diagnostics(filename, d)
     mkpath(dirname(filename))
     open(filename, "w") do io
+        deep_headers = isnothing(d.export_1000) ? () :
+                       ("export_1000_m_mg_C_m2_day", "cumulative_1000_m_g_C_m2")
         println(io, join(("day", "surface_P_mmol_N_m3", "surface_NO3_mmol_N_m3",
                           "export_100_m_mg_C_m2_day", "export_300_m_mg_C_m2_day",
                           "cumulative_100_m_g_C_m2", "cumulative_300_m_g_C_m2",
                           "nitrogen_inventory_mmol_N_m2", "bottom_loss_mmol_N_m2",
                           "nitrogen_budget_residual_mmol_N_m2",
                           "upper_100m_inorganic_mmol_N_m2", "upper_100m_living_mmol_N_m2",
-                          "upper_100m_detrital_mmol_N_m2", "upper_100m_DOM_mmol_N_m2"), ','))
+                          "upper_100m_detrital_mmol_N_m2", "upper_100m_DOM_mmol_N_m2",
+                          deep_headers...), ','))
         for i in eachindex(d.times)
+            deep_values = isnothing(d.export_1000) ? () :
+                          (d.export_1000.daily_mg_C[i], d.export_1000.cumulative_g_C[i])
             println(io, join((d.day[i], d.surface_P[i], d.surface_NO₃[i],
                               d.export_100.daily_mg_C[i], d.export_300.daily_mg_C[i],
                               d.export_100.cumulative_g_C[i], d.export_300.cumulative_g_C[i],
                               d.nitrogen_inventory[i], d.bottom_loss[i],
                               d.budget_residual[i],
                               d.upper_100m.inorganic[i], d.upper_100m.living[i],
-                              d.upper_100m.detrital[i], d.upper_100m.dissolved_organic[i]), ','))
+                              d.upper_100m.detrital[i], d.upper_100m.dissolved_organic[i],
+                              deep_values...), ','))
         end
     end
     return filename

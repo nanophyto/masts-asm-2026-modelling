@@ -13,7 +13,10 @@ Then choose one or more self-paced biological questions:
 - **Remineralisation:** `03_remineralisation.jl` - how does particle recycling affect nutrients?
 - **Phytoplankton mortality:** `06_phytoplankton_mortality.jl` - explore virus-like losses.
 
-Each comparison runs two explicit 365-day columns using OceanBioME.jl and
+The `07_bats_nabe.jl` script plots the two station locations, seasonal PAR
+and mixing depth, and idealised diffusivity to 300 m.
+
+Each biological comparison runs two explicit 365-day columns using OceanBioME.jl and
 Oceananigans.jl. The scripts save PNG plots, JLD2 profiles and CSV summaries to
 **`results/oceanbiome/`**.
 
