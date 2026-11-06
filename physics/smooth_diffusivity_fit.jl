@@ -3,19 +3,26 @@
 
 module SmoothDiffusivityFit
 
-export fit_smooth_diffusivity, mixing_depth_from_profile
+export fit_smooth_diffusivity, mixing_depth_from_profile, fit_mld_harmonics, rolling_mixing_depth_quantile
 
-using Statistics: median
+using Statistics: median, quantile
 using Oceananigans.Units: days
 using MASTSWorkshop: SmoothDiffusivity, smooth_mixed_layer_depth
 
 include(joinpath(@__DIR__, "mld_temperature_diagnostic.jl"))
 using .TemperatureMLD: temperature_mld
 
-function fit_mld_harmonics(t, h; period = 365days)
-    length(t) == length(h) >= 5 || throw(ArgumentError("Need at least five daily depths"))
+function fit_mld_harmonics(t, h; period = 365days, harmonics = 3)
+    harmonics in (2, 3) || throw(ArgumentError("Expected two or three seasonal harmonics"))
+    length(t) == length(h) >= 2 * harmonics + 1 ||
+        throw(ArgumentError("Insufficient daily mixing depths for the harmonic fit"))
     θ = 2pi .* t ./ period
-    basis = hcat(ones(length(t)), cos.(θ), sin.(θ), cos.(2 .* θ), sin.(2 .* θ))
+    basis = Matrix{Float64}(undef, length(t), 1 + 2 * harmonics)
+    basis[:, 1] .= 1
+    for n in 1:harmonics
+        basis[:, 2 * n] .= cos.(n .* θ)
+        basis[:, 2 * n + 1] .= sin.(n .* θ)
+    end
     return Tuple(basis \ h)
 end
 
@@ -77,6 +84,26 @@ function daily_mixing_depth(forcing; period = 365days)
     return daily_times, daily_depths
 end
 
+"""
+    rolling_mixing_depth_quantile(depths; probability = 0.75, window_days = 21)
+
+Centred, circular running quantile of daily positive-down CATKE mixing depths.
+The 21-day window wraps around the end of the year, preserving a periodic
+seasonal target; a 75th percentile represents regularly attained deep mixing
+rather than single-day extremes.
+"""
+function rolling_mixing_depth_quantile(depths; probability = 0.75, window_days = 21)
+    0 < probability < 1 || throw(ArgumentError("Quantile probability must be between 0 and 1"))
+    isodd(window_days) && 1 <= window_days <= length(depths) ||
+        throw(ArgumentError("Window must be odd, positive, and no longer than the daily series"))
+    all(x -> isfinite(x) && x > 0, depths) ||
+        throw(ArgumentError("Mixing depths must be finite and positive"))
+    half = (window_days - 1) ÷ 2
+    n = length(depths)
+    return [quantile([Float64(depths[mod1(i + offset, n)]) for offset in -half:half],
+                     probability) for i in eachindex(depths)]
+end
+
 # A thickness- and time-weighted median selects a representative diffusivity
 # without letting intermittent extreme Kz events dominate either layer.
 function weighted_median(values, weights)
@@ -94,23 +121,31 @@ end
     fit_smooth_diffusivity(forcing, station; exclusion_band = 15, surface_exclusion_depth = 20,
                            deep_fit_limit = 300)
 
-Fit a two-harmonic CATKE-defined mixing-depth cycle. Select the representative
-upper diffusivity by a thickness/time-weighted median within the mixing layer,
-excluding the top 20 m and the 15 m interface band. Select the deep median
-beneath that interface within the upper 300 m. The fitted diffusivity is a
-binary step with a smoothly moving boundary; it has no intermediate values.
+Fit a three-harmonic seasonal curve to the circular 21-day running 75th
+percentile of CATKE-defined daily mixing depths. Retain the three-harmonic
+least-squares fit to the original daily depths as a comparison. Representative
+upper/deep diffusivities are unchanged: thickness/time-weighted medians in
+the previous two-harmonic sampling regions. The resulting diffusivity is an
+exact binary step.
 """
 function fit_smooth_diffusivity(forcing, station::Symbol;
                                 exclusion_band = 15.0,
                                 surface_exclusion_depth = 20.0,
                                 deep_fit_limit = 300.0,
+                                envelope_probability = 0.75,
+                                envelope_window_days = 21,
                                 period = 365days)
     exclusion_band >= 0 && surface_exclusion_depth >= 0 && deep_fit_limit > 0 ||
         throw(ArgumentError("Expected non-negative exclusions and positive deep fit limit"))
     times = forcing.seconds
     faces, centres = forcing.faces, forcing.centres
     daily_times, daily_depths = daily_mixing_depth(forcing; period)
-    coeff = fit_mld_harmonics(daily_times, daily_depths; period)
+    two_harmonic_coeff = fit_mld_harmonics(daily_times, daily_depths; period, harmonics = 2)
+    three_harmonic_coeff = fit_mld_harmonics(daily_times, daily_depths; period, harmonics = 3)
+    envelope_depths = rolling_mixing_depth_quantile(daily_depths;
+                                                    probability = envelope_probability,
+                                                    window_days = envelope_window_days)
+    envelope_coeff = fit_mld_harmonics(daily_times, envelope_depths; period, harmonics = 3)
     raw_temperature_mld = [temperature_mld(centres, view(forcing.temperature, :, j))
                            for j in eachindex(times)]
 
@@ -118,7 +153,9 @@ function fit_smooth_diffusivity(forcing, station::Symbol;
     # fractions ensure partial cells at the boundaries are properly counted.
     upper_values, upper_weights = Float64[], Float64[]
     lower_values, lower_weights = Float64[], Float64[]
-    boundary_model = SmoothDiffusivity(station, coeff, 1.0, 0.0; period)
+    # Keep the original two-harmonic sampling boundary so that changing
+    # the number of harmonics does not change either representative Kz value.
+    boundary_model = SmoothDiffusivity(station, two_harmonic_coeff, 1.0, 0.0; period)
     for j in 1:(length(times) - 1)  # exclude next January's repeated endpoint
         dt = times[j + 1] - times[j]
         boundary = -smooth_mixed_layer_depth(boundary_model, times[j])
@@ -143,8 +180,18 @@ function fit_smooth_diffusivity(forcing, station::Symbol;
     upper = weighted_median(upper_values, upper_weights)
     deep = weighted_median(lower_values, lower_weights)
     upper > deep || throw(ArgumentError("Upper diffusivity must exceed deep background"))
-    model = SmoothDiffusivity(station, coeff, upper, deep; period)
-    return (; model, raw_temperature_mld, daily_times, daily_depths,
+    previous_model = SmoothDiffusivity(station, two_harmonic_coeff, upper, deep; period)
+    mean_model = SmoothDiffusivity(station, three_harmonic_coeff, upper, deep; period)
+    model = SmoothDiffusivity(station, envelope_coeff, upper, deep; period)
+    rms(m, depths) = sqrt(sum(abs2, [smooth_mixed_layer_depth(m, t) - h
+                                     for (t, h) in zip(daily_times, depths)]) / length(depths))
+    return (; model, mean_model, previous_model,
+             raw_temperature_mld, daily_times, daily_depths, envelope_depths,
+             previous_rmse = rms(previous_model, daily_depths),
+             mean_rmse = rms(mean_model, daily_depths),
+             envelope_rmse = rms(model, envelope_depths),
+             envelope_daily_rmse = rms(model, daily_depths),
+             envelope_probability, envelope_window_days,
              exclusion_band, surface_exclusion_depth, deep_fit_limit)
 end
 

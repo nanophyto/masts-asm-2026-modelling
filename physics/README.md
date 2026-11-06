@@ -135,7 +135,8 @@ julia --threads=1 --project=oceanbiome physics/fit_smooth_diffusivity.jl BATS ou
 julia --threads=1 --project=oceanbiome physics/fit_smooth_diffusivity.jl NABE outputs/physics/nabe_catke_spin365d_365d.jld2
 ```
 
-Each command writes a `*_smooth.toml` fit plus a
+Each command writes a `*_smooth.toml` **75th-percentile envelope** fit,
+a `*_smooth_mean.toml` copy of the prior three-harmonic mean fit, and a
 `*_smooth_comparison.png` containing (1) CATKE Kz, (2) binary two-layer Kz,
 (3) the signed difference in log10(Kz), and (4) **diffusivity-defined mixing
 depth** alongside the temperature-defined MLD for context.
@@ -143,21 +144,31 @@ depth** alongside the temperature-defined MLD for context.
 The fitted interface is based directly on CATKE Kz, rather than on a
 hydrographic MLD definition: take the daily-median cell-centred Kz profile;
 find the first downward crossing of the midpoint *in log Kz* between the
-upper 25 m and the background below 500 m; fit the resulting daily mixing
-depths with two annual harmonics. The surface boundary face is excluded from
-the depth diagnostic. This is a mixing-depth proxy for the two-layer forcing,
+upper 25 m and the background below 500 m. A centred, circular 21-day
+75th-percentile envelope of the resulting daily mixing depths is then fitted
+with three annual harmonics. This retains the regularly attained deeper
+mixing conditions while downweighting isolated extremes. The surface boundary
+face is excluded from the depth diagnostic. This is a mixing-depth proxy for the two-layer forcing,
 not an observational mixed-layer-depth estimate.
 
 **Upper-layer Kz** is a time- and thickness-weighted **median** between 20 m
-and 15 m above the fitted mixing depth. **Deep Kz** is a time- and
-thickness-weighted **median** from 15 m below the mixing depth down to 300 m.
-This avoids allowing rare mixing bursts near the surface or the weak abyssal
+and 15 m above the previous two-harmonic mixing-depth boundary. **Deep Kz** is a
+time- and thickness-weighted **median** from 15 m below that boundary down to
+300 m. This avoids allowing rare mixing bursts near the surface or the weak abyssal
 background to determine the two representative values. The diffusivity is
 **strictly binary**: upper value above the smooth moving boundary and deep
 value below it, with no intermediate values. The `.toml` records the method,
-source file, station, coefficients and both diffusivities (`fit_version = 2`).
+source file, station, seven seasonal coefficients, envelope quantile/window,
+and both diffusivities (`fit_version = 4`). The comparison plot displays the
+previous **mean three-harmonic fit** and the new **75th-percentile envelope
+fit**, alongside the raw daily estimates. Their RMSE values are reported against
+their respective targets. The original two-harmonic boundary remains the
+sampling mask for upper/deep medians, so both representative diffusivities
+are unchanged. Existing version 2 and 3 TOML files remain readable.
 
-Use a fit for a shallow or deep **1D OceanBioME column**:
+Use either fit for a shallow or deep **1D OceanBioME column**. Select
+`*_smooth.toml` for the 75th-percentile envelope or `*_smooth_mean.toml`
+for the previous mean three-harmonic boundary:
 
 ```julia
 using MASTSWorkshop
@@ -173,7 +184,8 @@ original idealised physics remains the default.
 The fit is intentionally a compact seasonal approximation. Short-lived
 mixing events remain visible in the comparison but the two medians represent
 typical mixing conditions. After applying this update, rerun both fitting
-commands to regenerate the version 2 TOML files for the binary formulation.
+commands to regenerate the version 4 TOML files with the three-harmonic,
+75th-percentile binary interface.
 
 ## 6. Run offline biology
 

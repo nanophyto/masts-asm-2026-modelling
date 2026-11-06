@@ -182,14 +182,20 @@ julia --threads=1 --project=oceanbiome physics/fit_smooth_diffusivity.jl NABE ou
 ```
 
 The resulting `*_smooth_comparison.png` figures show CATKE diffusivity, the
-binary two-layer approximation, their difference in log10 diffusivity, and
-the CATKE diffusivity-defined mixing depth (with temperature-based MLD shown
-for context). The smooth boundary is fitted from daily median Kz profiles;
+three-harmonic, 75th-percentile binary two-layer approximation, their
+difference in log10 diffusivity, and the CATKE diffusivity-defined daily mixing
+depths. The plot contrasts the earlier mean three-harmonic curve with the
+new three-harmonic fit to the **centred 21-day rolling 75th-percentile** mixing
+depth (temperature-based MLD shown for context). The smooth boundary uses
+daily median Kz profiles;
 both diffusivities are thickness-/time-weighted medians: the upper samples
-exclude the top 20 m, and the interior samples extend to 300 m. The smooth
-boundary separates two *constant* diffusivities, with no transition gradient.
-Each `*_smooth.toml` records the fitted coefficients and diffusivities.
-Select the fit using `column(:BATS; deep=true, smooth_physics="..._smooth.toml")`.
+exclude the top 20 m, and the interior samples extend to 300 m. The three-harmonic mixing-depth boundary separates two *constant*
+diffusivities, with no transition gradient. Representative diffusivity values
+retain the previous two-harmonic sampling mask to isolate the change in
+mixing-depth shape. The `*_smooth.toml` file records the 75th-percentile fit and representative
+diffusivities; `*_smooth_mean.toml` preserves the previous three-harmonic mean
+fit using the same two diffusivities. Select either with
+`column(:BATS; deep=true, smooth_physics="..._smooth.toml")`.
 
 To use the saved second year in the existing biological column:
 
