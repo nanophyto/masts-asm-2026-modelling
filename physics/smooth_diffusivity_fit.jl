@@ -162,9 +162,11 @@ function fit_smooth_diffusivity(forcing, station::Symbol;
         for k in eachindex(centres)
             low, high = faces[k], faces[k + 1]
             κ = (forcing.diffusivity[k, j] + forcing.diffusivity[k + 1, j]) / 2
-            upper_thickness = max(0.0, min(high, 0.0) -
-                                      max(low, boundary + exclusion_band,
-                                          -surface_exclusion_depth))
+            # Sample the mixed layer below the excluded surface band.
+            # The upper bound is -surface_exclusion_depth, not the sea surface;
+            # using it as a lower bound would select only the excluded band.
+            upper_thickness = max(0.0, min(high, -surface_exclusion_depth) -
+                                      max(low, boundary + exclusion_band))
             lower_thickness = max(0.0, min(high, boundary - exclusion_band) -
                                       max(low, -deep_fit_limit))
             if upper_thickness > 0
