@@ -87,8 +87,7 @@ under `workshop/results/oceanbiome/`, in their own experiment directories.
 The first plot may take longer while CairoMakie loads.
 
 The default Julia exercises use 30 vertical cells over 300 m, a 30-minute time step,
-vertically implicit mixing and a 365-day seasonal simulation. The BATS/NABE
-comparison uses `deep=true` for 60 stretched cells over 1200 m.
+vertically implicit mixing and a 365-day seasonal simulation. The BATS/NABE comparison plots the two prescribed physical environments.
 
 ## Run the workshop image with Docker
 

@@ -29,10 +29,9 @@ how the model is constructed. The
 [physical-forcing appendix](generated/physical_forcing.md) explains the
 prepared light and mixing conditions used by every exercise.
 
-For an Atlantic comparison, run
-[Idealised BATS and NABE](generated/07_bats_nabe.md) using the shared 1200 m
-deep grid. It generates station forcing and ecosystem comparison figures and
-saves flux profiles through 1000 m.
+For the physical setting, see the [BATS and NABE comparison](generated/07_bats_nabe.md)
+for a location map, seasonal light and mixing depth, and upper-300 m
+vertical diffusivity.
 
 The mortality experiment provides a simple analogue of virus-like losses.
 The LOBSTER model has no separate virus population or infection process.

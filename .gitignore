@@ -1,6 +1,7 @@
 outputs/
 *.jld2
 *.nc
+!data/maps/north_atlantic_cafe_npp_2023.nc
 __pycache__/
 .pytest_cache/
 .venv/

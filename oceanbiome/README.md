@@ -137,17 +137,14 @@ This uses the figures and diagnostics under `outputs/oceanbiome/reference_docs/`
 
 ## Idealised Atlantic comparison
 
-`MASTSWorkshop.column(:BATS)` and `column(:NABE)` build 300 m / 30-cell
-columns for production exercises. Both stations accept `deep=true` for a shared,
-stretched 1200 m / 60-cell grid supporting export at 1000 m. The BATS and
-NABE columns use common biology with station-specific seasonal light, mixing,
-and initial nitrate. The station profiles are provisional idealisations. Run the paired reference:
+The three figures in `07_bats_nabe.jl` compare station locations, seasonal
+PAR and mixing depth, and upper-300 m diffusivity:
 
 ```bash
 julia --threads=1 --project=oceanbiome workshop/01_OceanBioME/07_bats_nabe.jl
 ```
 
-Both columns use a 30-minute timestep and export diagnostics at 100, 300,
-and 1000 m. `MASTS_COMPARISON_DAYS=2` selects a two-day functional check.
-The station nitrate profiles and seasonal forcings are initial hypotheses;
-the next development stage compares them against measured station climatologies.
+`MASTSWorkshop.column(:BATS)` and `column(:NABE)` still provide 300 m
+teaching columns and optional stretched 1200 m columns (`deep=true`) for
+biogeochemistry experiments. The comparison page itself only plots the
+prepared physical environments.

@@ -38,13 +38,13 @@ jobs:
         run: julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
       - name: Test documentation image validator
         run: python3 -m unittest discover -s scripts -p 'test_documentation_images.py'
-      - name: Run all OceanBioME exercises and build documentation
+      - name: Build OceanBioME figures and documentation
         env:
           DOCS_QUICK: "false"
           DOCS_CONTENT_ONLY: "false"
           DOCS_REUSE_RESULTS: "false"
-        # Each build runs the seven existing annual exercises plus both
-        # Atlantic station controls, checks diagnostics, and regenerates figures.
+        # Rebuild ecology exercises, the three physical-comparison plots and
+        # the documentation. CATKE appendix reference images are committed.
         # GitHub Pages deployment is handled by the official actions below.
         run: |
           rm -rf outputs/oceanbiome/reference_docs

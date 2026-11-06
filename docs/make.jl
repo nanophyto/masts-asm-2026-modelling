@@ -1,4 +1,4 @@
-using Pkg, SHA
+using Pkg
 Pkg.instantiate()
 using Documenter, Literate
 
@@ -17,30 +17,6 @@ content_only = get(ENV, "DOCS_CONTENT_ONLY", "false") == "true"
 reuse_results = get(ENV, "DOCS_REUSE_RESULTS", "false") == "true"
 quick && reuse_results && error("DOCS_REUSE_RESULTS requires full-run reference outputs")
 output_base = joinpath(root, "outputs", "oceanbiome", quick ? "docs_smoke" : "reference_docs")
-
-# Reuse the small committed observational CSV. Full documentation builds always
-# regenerate the MLD figure and metrics without downloading NOAA NetCDF files.
-gosml_csv = joinpath(root, "data", "observations", "gosml_mld_bats_nabe.csv")
-if !quick && !content_only && !isfile(gosml_csv)
-    error("Missing $gosml_csv. Generate and commit the observational reference with " *
-          "`conda run -n masts-gosml python scripts/prepare_mld_climatology.py` before building docs.")
-end
-
-# The scientific light forcing is generated from NASA POWER's 2001-2020
-# point climatologies. Verify the committed observations and coefficients match
-# before spending minutes regenerating annual biology (including in CI).
-par_csv = joinpath(root, "data", "observations", "nasa_power_par_bats_nabe.csv")
-par_coefficients = joinpath(root, "oceanbiome", "src", "par_forcing_coefficients.jl")
-if !quick && !content_only
-    isfile(par_csv) || error("Missing $par_csv. Run " *
-        "`conda run -n masts-gosml python scripts/prepare_par_climatology.py` and commit its outputs.")
-    coefficients = read(par_coefficients, String)
-    occursin("const PAR_COEFFICIENT_ORIGIN = \"NASA POWER 2001-2020\"", coefficients) ||
-        error("NASA POWER PAR calibration is pending. Run scripts/prepare_par_climatology.py.")
-    checksum = bytes2hex(sha256(read(par_csv)))
-    occursin("const PAR_CSV_SHA256 = \"$checksum\"", coefficients) ||
-        error("NASA POWER PAR CSV and generated coefficients differ. Rerun data preparation.")
-end
 
 function run_exercise(name, output_dir)
     exercise = joinpath(exercise_dir, name)
@@ -115,56 +91,33 @@ for (script, experiment, _) in parameter_exercises
     parameter_outputs[experiment] = (quick || reuse_results || content_only) ? nothing : run_exercise(script, joinpath(output_base, experiment))
 end
 
-# The deep BATS-NABE station exercise runs both annual baselines and
-# generates fresh figures during every full scientific documentation build.
-station_output = (quick || reuse_results || content_only) ? nothing :
-                 run_exercise("07_bats_nabe.jl", station_dir)
-
-# These prescribed-physics figures are cheap to regenerate even when annual
-# biological outputs are being reused. A full build also re-runs the ecosystem
-# under the revised MLD curves.
+# The BATS/NABE comparison is now three quick physical-forcing figures;
+# there are no station ecosystem runs or observational statistics on this page.
+if !(quick || reuse_results || content_only)
+    run_exercise("07_bats_nabe.jl", station_dir)
+end
 if reuse_results && !content_only
-    @warn "DOCS_REUSE_RESULTS reuses annual ecosystem outputs; run a full build after changing MLD or PAR forcing to update biology figures."
     mkpath(station_dir)
     code = "using MASTSWorkshop, CairoMakie; " *
-           "MASTSWorkshop.plot_station_forcing(ARGS[1]; preview=false); " *
-           "MASTSWorkshop.plot_station_diffusivity(ARGS[2]; preview=false)"
-    forcing_file = joinpath(station_dir, "station_forcing.png")
-    diffusivity_file = joinpath(station_dir, "station_diffusivity.png")
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $forcing_file $diffusivity_file`)
+           "MASTSWorkshop.plot_station_map(ARGS[1]; preview=false); " *
+           "MASTSWorkshop.plot_station_forcing(ARGS[2]; preview=false); " *
+           "MASTSWorkshop.plot_station_diffusivity(ARGS[3]; preview=false)"
+    files = [joinpath(station_dir, name) for name in
+             ("station_map.png", "station_forcing.png", "station_diffusivity.png")]
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $(files...)`)
 end
 
-# This figure and its diagnostics are rebuilt from the checked-in GOSML CSV
-# even with DOCS_REUSE_RESULTS=true; unlike the annual biology, they are quick.
-mld_png = joinpath(station_dir, "gosml_mld_comparison.png")
-mld_summary = joinpath(station_dir, "gosml_mld_summary.md")
-if !quick && !content_only
-    mkpath(station_dir)
-    script = joinpath(root, "scripts", "plot_mld_comparison.jl")
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $gosml_csv $mld_png $mld_summary`)
-    check_png(mld_png)
-    cp(mld_summary, joinpath(assets_dir, "gosml_mld_summary.md"); force = true)
+# Optional instructor physics files: regenerate appendix Figures 1 and 2 from
+# saved CATKE runs when available. Otherwise, the committed reference figures
+# make the published documentation self-contained and offline-buildable.
+bats_physics = joinpath(root, "outputs", "physics", "bats_catke_spin365d_365d.jld2")
+nabe_physics = joinpath(root, "outputs", "physics", "nabe_catke_spin365d_365d.jld2")
+if !content_only && !quick && isfile(bats_physics) && isfile(nabe_physics)
+    script = joinpath(root, "physics", "plot_appendix_physics.jl")
+    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $bats_physics $nabe_physics $(joinpath(assets_dir, "numericalearth_inputs.png")) $(joinpath(assets_dir, "numericalearth_diffusivity.png"))`)
 end
-
-# Satellite-derived PAR reference: regenerate from the checked-in monthly
-# climatology on every full docs build, including DOCS_REUSE_RESULTS=true.
-par_png = joinpath(station_dir, "nasa_power_par_comparison.png")
-par_summary = joinpath(station_dir, "nasa_power_par_summary.md")
-if !quick && !content_only
-    mkpath(station_dir)
-    script = joinpath(root, "scripts", "plot_par_comparison.jl")
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $par_csv $par_png $par_summary`)
-    check_png(par_png)
-    cp(par_summary, joinpath(assets_dir, "nasa_power_par_summary.md"); force = true)
-end
-
-# The physics diagram belongs to the appendix; the reference exercise
-# concentrates on simulation results and its five scientific figures.
-physics_figure = joinpath(reference_dir, "reference_physics.png")
-if !content_only && (reuse_results || !isfile(physics_figure))
-    mkpath(reference_dir)
-    code = "using MASTSWorkshop, CairoMakie; MASTSWorkshop.plot_idealised_physics(ARGS[1]; preview=false)"
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $physics_figure`)
+for name in ("numericalearth_inputs.png", "numericalearth_diffusivity.png")
+    check_png(joinpath(assets_dir, name))
 end
 
 figures = (
@@ -173,18 +126,15 @@ figures = (
     (reference_dir, "reference_living_fraction.png"),
     (reference_dir, "reference_carbon_export.png"),
     (reference_dir, "reference_martin_curve.png"),
-    (reference_dir, "reference_physics.png"),
     (grazing_dir, "grazing_response.png"),
     (grazing_dir, "grazing_plankton_balance.png"),
     (grazing_dir, "carbon_export.png"),
 )
 parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(kind).png")
                           for (_, experiment, _) in parameter_exercises for kind in ("response", "export"))
-station_figures = ((station_dir, "station_forcing.png"),
-                   (station_dir, "station_diffusivity.png"),
-                   (station_dir, "station_comparison.png"),
-                   (station_dir, "gosml_mld_comparison.png"),
-                   (station_dir, "nasa_power_par_comparison.png"))
+station_figures = ((station_dir, "station_map.png"),
+                   (station_dir, "station_forcing.png"),
+                   (station_dir, "station_diffusivity.png"))
 if !content_only
     for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
         check_png(joinpath(directory, filename))
@@ -233,10 +183,6 @@ if !content_only
                       for (label, name) in (("Control", "control"), ("Modified", modified))]
             write_result_assets(experiment, parameter_outputs[experiment], checks)
         end
-        station_checks = [budget_summary(string(station),
-                          joinpath(station_dir, "$(lowercase(string(station)))_diagnostics.csv"))
-                          for station in (:BATS, :NABE)]
-        write_result_assets("bats_nabe", station_output, station_checks)
     end
 
 end
@@ -289,32 +235,41 @@ for (script, experiment, _) in parameter_exercises
     ))
 end
 
-make_tutorial("07_bats_nabe.jl", (
-    "WORKSHOP_STATION_FORCING_FIGURE" =>
-        figure_block("station_forcing.png", "Contrasting idealised BATS and NABE physical forcing"),
-    "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
-        figure_block("station_diffusivity.png", "Seasonal depth-time vertical diffusivity at BATS and NABE"),
-    "WORKSHOP_STATION_COMPARISON_FIGURE" =>
-        figure_block("station_comparison.png", "Annual BATS-NABE ecosystem and deep-export comparison"),
-    "WORKSHOP_GOSML_COMPARISON_FIGURE" =>
-        figure_block("gosml_mld_comparison.png", "Observed GOSML versus idealised mixed-layer depth at BATS and NABE"),
-    "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md"),
-    "WORKSHOP_POWER_PAR_COMPARISON_FIGURE" =>
-        figure_block("nasa_power_par_comparison.png", "NASA POWER surface-PAR climatology versus idealised BATS and NABE forcing"),
-    "WORKSHOP_POWER_PAR_SUMMARY_TABLE" => asset_text("nasa_power_par_summary.md"),
-))
+# The published BATS/NABE comparison is a concise three-figure page, with
+# plots built by 07_bats_nabe.jl; the plotting script is still runnable.
+station_page = joinpath(@__DIR__, "src", "comparison.md.in")
+has_npp_map = isfile(joinpath(root, "data", "maps", "north_atlantic_cafe_npp_2023.png"))
+station_map_credit = if has_npp_map
+    "<small>2023 annual-mean satellite-derived NPP (VIIRS CAFE), masked to open-ocean water deeper than 200 m: " *
+    "[Ocean Productivity](https://orca.science.oregonstate.edu/npp_products.php); " *
+    "[Silsbe et al. (2016)](https://doi.org/10.1002/2016GB005521); " *
+    "Natural Earth bathymetry. Calculated from the monthly numerical data with `scripts/prepare_satellite_npp_map.py`.</small>"
+else
+    "<small>Locator map using [Natural Earth](https://www.naturalearthdata.com/) coastlines. " *
+    "Generate the satellite NPP map using `scripts/prepare_satellite_npp_map.py`.</small>"
+end
+write(joinpath(generated_dir, "07_bats_nabe.md"),
+      replace(read(station_page, String),
+              "WORKSHOP_STATION_MAP_CREDIT" => station_map_credit,
+              "WORKSHOP_STATION_MAP_FIGURE" =>
+                  figure_block("station_map.png", has_npp_map ?
+                               "BATS and NABE on the 2023 annual-mean satellite NPP map" :
+                               "BATS and NABE in the North Atlantic"),
+              "WORKSHOP_STATION_FORCING_FIGURE" =>
+                  figure_block("station_forcing.png", "Prescribed PAR and seasonal mixing depth"),
+              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
+                  figure_block("station_diffusivity.png", "Idealised diffusivity in the upper 300 m")))
 
-# The appendix is a template: Documenter should process only its generated
-# copy, where the relative links to both tutorials are correct.
+# Short appendix: physical inputs, CATKE diffusivity, idealised diffusivity.
 physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
 write(joinpath(generated_dir, "physical_forcing.md"),
       replace(read(physics_src, String),
-              "WORKSHOP_PHYSICS_FIGURE" => figure_block("reference_physics.png", "Annual surface light, mixed-layer depth and vertical diffusivity"),
-              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" => figure_block("station_diffusivity.png", "Depth-time mixing at BATS and NABE"),
-              "WORKSHOP_GOSML_COMPARISON_FIGURE" => figure_block("gosml_mld_comparison.png", "GOSML mixed-layer climatology versus prescribed BATS and NABE forcing"),
-              "WORKSHOP_GOSML_SUMMARY_TABLE" => asset_text("gosml_mld_summary.md"),
-              "WORKSHOP_POWER_PAR_COMPARISON_FIGURE" => figure_block("nasa_power_par_comparison.png", "NASA POWER surface-PAR climatology versus BATS and NABE forcing"),
-              "WORKSHOP_POWER_PAR_SUMMARY_TABLE" => asset_text("nasa_power_par_summary.md")))
+              "WORKSHOP_NUMERICALEARTH_INPUTS_FIGURE" =>
+                  figure_block("numericalearth_inputs.png", "NumericalEarth wind-driven currents and hydrography"),
+              "WORKSHOP_NUMERICALEARTH_DIFFUSIVITY_FIGURE" =>
+                  figure_block("numericalearth_diffusivity.png", "CATKE seasonal tracer diffusivity"),
+              "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
+                  figure_block("station_diffusivity.png", "Idealised seasonal tracer diffusivity")))
 
 makedocs(
     sitename = "MASTS ASM 2026 — Modelling for biogeochemists",

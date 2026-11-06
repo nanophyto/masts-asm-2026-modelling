@@ -36,7 +36,7 @@ export column, results_directory, deep_grid_faces,
        plot_vertical_evolution, plot_reference_export, plot_export_profile, plot_idealised_physics,
        plot_nitrogen_partition, plot_living_fraction, plot_plankton_balance,
        plot_grazing_response, plot_carbon_export, plot_parameter_response, plot_parameter_export,
-       plot_station_forcing, plot_station_diffusivity, plot_station_comparison,
+       plot_station_map, plot_station_forcing, plot_station_diffusivity, plot_station_comparison,
        read_gosml_mld, compare_mld_climatology, write_mld_summary, plot_mld_comparison,
        read_power_par, compare_par_climatology, write_par_summary, plot_par_comparison
 
@@ -52,6 +52,7 @@ function plot_grazing_response end
 function plot_carbon_export end
 function plot_parameter_response end
 function plot_parameter_export end
+function plot_station_map end
 function plot_station_forcing end
 function plot_station_diffusivity end
 function plot_station_comparison end

@@ -1,5 +1,14 @@
 # MASTS ASM 2026 - Getting started with modelling
 
+If you downloaded these materials as a zip, first extract them and open the
+folder in VS Code. From a terminal that is one level above the extracted
+folder:
+
+```bash
+unzip npp_doc_work.zip
+cd npp_doc_work/workshop
+```
+
 **Start with `01_OceanBioME/00_reference_column.jl`.** In the editor, choose
 **Julia: Execute File in REPL**. Figures appear in the Julia Plot Pane in
 creation order; use the plot history to revisit an earlier figure.
@@ -27,10 +36,9 @@ The mortality exercise is a representation of **density-dependent losses**;
 LOBSTER does not explicitly track viruses. We can explore it as a simple
 virus-like scenario and discuss how that differs from a mechanistic infection model.
 
-For a deeper Atlantic contrast, open `01_OceanBioME/07_bats_nabe.jl`.
-It compares idealised BATS and NABE conditions on the same stretched 1200 m
-grid and diagnoses particulate export at 1000 m. A two-day smoke run can be
-selected with `MASTS_COMPARISON_DAYS=2`; the default run lasts 365 days.
+For the physical contrast between BATS and NABE, open
+`01_OceanBioME/07_bats_nabe.jl`. It plots the station locations, seasonal
+PAR and mixing depth, and vertical diffusivity in the upper 300 m.
 The Python/Abil.py practical is provided separately.
 
 From this folder, the reference can also be run in a terminal:

@@ -45,6 +45,7 @@ using CairoMakie
              (MASTSWorkshop.plot_carbon_export, (control, reduced), "carbon_export.png"),
              (MASTSWorkshop.plot_parameter_response, (control, reduced), "parameter_response.png"),
              (MASTSWorkshop.plot_parameter_export, (control, reduced), "parameter_export.png"),
+             (MASTSWorkshop.plot_station_map, (), "station_map.png"),
              (MASTSWorkshop.plot_station_forcing, (), "station_forcing.png"),
              (MASTSWorkshop.plot_station_diffusivity, (), "station_diffusivity.png"),
              (MASTSWorkshop.plot_station_comparison, (deep_bats, deep_nabe), "station_comparison.png"))
