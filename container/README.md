@@ -350,7 +350,7 @@ requirement before testing a constrained builder on smaller hardware.
 After a successful build, verify cold-run speed and scientific outputs:
 
 ```bash
-./scripts/benchmark_container_startup.sh masts-asm-2026-modelling:sysimage
+# Use container/check_outputs.py or the GHCR publish smoke test for image validation.
 ./scripts/test_container.sh masts-asm-2026-modelling:sysimage
 ```
 

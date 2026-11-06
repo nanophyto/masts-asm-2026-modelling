@@ -7,22 +7,45 @@ scientific_project = joinpath(root, "oceanbiome")
 exercise_dir = joinpath(root, "workshop", "01_OceanBioME")
 assets_dir = joinpath(@__DIR__, "src", "assets")
 generated_dir = joinpath(@__DIR__, "src", "generated")
-mkpath(assets_dir)
-mkpath(generated_dir)
+output_base = joinpath(root, "outputs", "oceanbiome", "reference_docs")
 
-# PR builds validate plotting using isolated output paths; full builds also
-# publish reference figures and console assets.
-quick = get(ENV, "DOCS_QUICK", "false") == "true"
-content_only = get(ENV, "DOCS_CONTENT_ONLY", "false") == "true"
-reuse_results = get(ENV, "DOCS_REUSE_RESULTS", "false") == "true"
-quick && reuse_results && error("DOCS_REUSE_RESULTS requires full-run reference outputs")
-output_base = joinpath(root, "outputs", "oceanbiome", quick ? "docs_smoke" : "reference_docs")
+# The source tree contains inputs and code. Figures, reports, tutorial pages and
+# experiment results are regenerated for every build (including local builds).
+for directory in (assets_dir, generated_dir, output_base)
+    rm(directory; force = true, recursive = true)
+    mkpath(directory)
+end
 
-function run_exercise(name, output_dir)
-    exercise = joinpath(exercise_dir, name)
-    command = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $exercise`
+function check_png(filename)
+    isfile(filename) && filesize(filename) > 8 || error("Missing or empty figure: $filename")
+    open(filename) do io
+        read(io, 8) == UInt8[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] ||
+            error("Invalid PNG header in $filename")
+    end
+end
+
+# Render the location map from the retained numerical CAFE dataset. The plot
+# script needs only Python, numpy, scipy and matplotlib; HDF4 downloads are not
+# part of the published documentation build.
+map_input = joinpath(root, "data", "maps", "north_atlantic_cafe_npp_2023.nc")
+map_output = joinpath(root, "data", "maps", "north_atlantic_cafe_npp_2023.png")
+isfile(map_input) || error("Missing numerical NPP input: $map_input")
+python = get(ENV, "MASTS_MAP_PYTHON", get(ENV, "PYTHON", "python3"))
+run(`$python $(joinpath(root, "scripts", "plot_satellite_npp_map.py")) --input $map_input --output $map_output`)
+check_png(map_output)
+
+# The workshop examples use a separate, pinned Julia environment.
+instantiate_cmd = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $("using Pkg; Pkg.instantiate()")`
+run(addenv(instantiate_cmd, "JULIA_PKG_PRECOMPILE_AUTO" => "0"))
+plot_check = "using MASTSWorkshop, CairoMakie; " *
+             "isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)) && " *
+             "error(\"Workshop plotting extension did not load\")"
+run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $plot_check`)
+
+function run_exercise(name, directory)
+    command = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $(joinpath(exercise_dir, name))`
     output = cd(root) do
-        read(addenv(command, "MASTS_OUTPUT_DIR" => output_dir), String)
+        read(addenv(command, "MASTS_OUTPUT_DIR" => directory), String)
     end
     return strip(replace(output, root * "/" => ""))
 end
@@ -37,21 +60,11 @@ function budget_summary(label, filename)
 
     inventory = getindex.(rows, only(findall(==("nitrogen_inventory_mmol_N_m2"), columns)))
     residual = getindex.(rows, only(findall(==("nitrogen_budget_residual_mmol_N_m2"), columns)))
-    initial_inventory = first(inventory)
-    initial_inventory > 0 || error("Non-positive nitrogen inventory in $filename")
-    max_percent = 100 * maximum(abs, residual) / initial_inventory
-    final_percent = 100 * last(residual) / initial_inventory
-
+    first(inventory) > 0 || error("Non-positive nitrogen inventory in $filename")
+    max_percent = 100 * maximum(abs, residual) / first(inventory)
+    final_percent = 100 * last(residual) / first(inventory)
     max_percent <= 5 || error("$label nitrogen-budget residual exceeds 5%: $(round(max_percent; digits=2))%")
     return "| $label | $(round(final_percent; digits=2))% | $(round(max_percent; digits=2))% |"
-end
-
-function check_png(filename)
-    isfile(filename) && filesize(filename) > 8 || error("Missing or empty figure: $filename")
-    open(filename) do io
-        read(io, 8) == UInt8[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] ||
-            error("Invalid PNG header in $filename")
-    end
 end
 
 reference_dir = joinpath(output_base, "reference_column")
@@ -62,63 +75,12 @@ parameter_exercises = (("02_sinking.jl", "sinking", "slow_sinking"),
                        ("04_light_affinity.jl", "light_affinity", "higher_light_affinity"),
                        ("05_nutrient_affinity.jl", "nutrient_affinity", "higher_nutrient_affinity"),
                        ("06_phytoplankton_mortality.jl", "phytoplankton_mortality", "higher_mortality"))
-parameter_outputs = Dict{String, Union{String, Nothing}}()
-# For documentation-only fixes, reuse the previously generated annual
-# profiles, CSV diagnostics, and figures without repeating the simulations.
-reference_output, grazing_output = if content_only
-    @info "Building documentation using committed scientific figures"
-    (nothing, nothing)
-elseif reuse_results
-    @info "Reusing existing annual simulation results"
-    (nothing, nothing)
-else
-    # The documentation and scientific exercises have separate Julia environments.
-    # Set up the scientific environment before checking its plotting extension.
-    instantiate_cmd = `$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $("using Pkg; Pkg.instantiate()")`
-    run(addenv(instantiate_cmd, "JULIA_PKG_PRECOMPILE_AUTO" => "0"))
-    # Catch plotting-extension failures before starting annual simulations.
-    plot_check = "using MASTSWorkshop, CairoMakie; " *
-                 "isnothing(Base.get_extension(MASTSWorkshop, :MASTSWorkshopMakieExt)) && " *
-                 "error(\"Workshop plotting extension did not load\")"
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $plot_check`)
-    (run_exercise("00_reference_column.jl", reference_dir),
-     run_exercise("01_grazing.jl", grazing_dir))
-end
 
-# Full documentation builds run all parameter experiments; DOCS_QUICK
-# remains available as a local smoke-test option.
-for (script, experiment, _) in parameter_exercises
-    parameter_outputs[experiment] = (quick || reuse_results || content_only) ? nothing : run_exercise(script, joinpath(output_base, experiment))
-end
-
-# The BATS/NABE comparison is now three quick physical-forcing figures;
-# there are no station ecosystem runs or observational statistics on this page.
-if !(quick || reuse_results || content_only)
-    run_exercise("07_bats_nabe.jl", station_dir)
-end
-if reuse_results && !content_only
-    mkpath(station_dir)
-    code = "using MASTSWorkshop, CairoMakie; " *
-           "MASTSWorkshop.plot_station_map(ARGS[1]; preview=false); " *
-           "MASTSWorkshop.plot_station_forcing(ARGS[2]; preview=false); " *
-           "MASTSWorkshop.plot_station_diffusivity(ARGS[3]; preview=false)"
-    files = [joinpath(station_dir, name) for name in
-             ("station_map.png", "station_forcing.png", "station_diffusivity.png")]
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project -e $code $(files...)`)
-end
-
-# Optional instructor physics files: regenerate appendix Figures 1 and 2 from
-# saved CATKE runs when available. Otherwise, the committed reference figures
-# make the published documentation self-contained and offline-buildable.
-bats_physics = joinpath(root, "outputs", "physics", "bats_catke_spin365d_365d.jld2")
-nabe_physics = joinpath(root, "outputs", "physics", "nabe_catke_spin365d_365d.jld2")
-if !content_only && !quick && isfile(bats_physics) && isfile(nabe_physics)
-    script = joinpath(root, "physics", "plot_appendix_physics.jl")
-    run(`$(Base.julia_cmd()) --threads=1 --startup-file=no --project=$scientific_project $script $bats_physics $nabe_physics $(joinpath(assets_dir, "numericalearth_inputs.png")) $(joinpath(assets_dir, "numericalearth_diffusivity.png"))`)
-end
-for name in ("numericalearth_inputs.png", "numericalearth_diffusivity.png")
-    check_png(joinpath(assets_dir, name))
-end
+reference_output = run_exercise("00_reference_column.jl", reference_dir)
+grazing_output = run_exercise("01_grazing.jl", grazing_dir)
+parameter_outputs = Dict(experiment => run_exercise(script, joinpath(output_base, experiment))
+                         for (script, experiment, _) in parameter_exercises)
+run_exercise("07_bats_nabe.jl", station_dir)
 
 figures = (
     (reference_dir, "reference_vertical_evolution.png"),
@@ -135,25 +97,18 @@ parameter_figures = Tuple((joinpath(output_base, experiment), "$(experiment)_$(k
 station_figures = ((station_dir, "station_map.png"),
                    (station_dir, "station_forcing.png"),
                    (station_dir, "station_diffusivity.png"))
-if !content_only
-    for (directory, filename) in (quick ? figures : (figures..., parameter_figures..., station_figures...))
-        check_png(joinpath(directory, filename))
-        if !quick
-            cp(joinpath(directory, filename), joinpath(assets_dir, filename); force = true)
-        end
-    end
+all_figures = (figures..., parameter_figures..., station_figures...)
+for (directory, filename) in all_figures
+    source = joinpath(directory, filename)
+    check_png(source)
+    cp(source, joinpath(assets_dir, filename); force = true)
 end
 
 function write_result_assets(prefix, output, checks)
-    (quick || content_only) && return
-    figure_names = last.((figures..., parameter_figures..., station_figures...))
-    if !isnothing(output)
-        log_lines = filter(line -> !any(name -> occursin(name, line), figure_names),
-                           split(output, '\n'))
-        write(joinpath(assets_dir, "$(prefix)_console.md"),
-              "**365-day simulation — console output**\n\n````text\n" *
-              join(log_lines, "\n") * "\n````\n")
-    end
+    figure_names = last.(all_figures)
+    log_lines = filter(line -> !any(name -> occursin(name, line), figure_names), split(output, '\n'))
+    write(joinpath(assets_dir, "$(prefix)_console.md"),
+          "**365-day simulation — console output**\n\n````text\n" * join(log_lines, "\n") * "\n````\n")
     write(joinpath(assets_dir, "$(prefix)_budget.md"), """
         ### Nitrogen-budget check
 
@@ -170,34 +125,22 @@ function write_result_assets(prefix, output, checks)
         """)
 end
 
-if !content_only
-    reference_checks = [budget_summary("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))]
-    grazing_checks = [budget_summary(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
-                      for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))]
-    write_result_assets("reference_column", reference_output, reference_checks)
-    write_result_assets("grazing", grazing_output, grazing_checks)
-    if !quick
-        for (_, experiment, modified) in parameter_exercises
-            directory = joinpath(output_base, experiment)
-            checks = [budget_summary(label, joinpath(directory, "$(name)_diagnostics.csv"))
-                      for (label, name) in (("Control", "control"), ("Modified", modified))]
-            write_result_assets(experiment, parameter_outputs[experiment], checks)
-        end
-    end
-
+write_result_assets("reference_column", reference_output,
+                    [budget_summary("Reference", joinpath(reference_dir, "reference_diagnostics.csv"))])
+write_result_assets("grazing", grazing_output,
+                    [budget_summary(label, joinpath(grazing_dir, "$(name)_diagnostics.csv"))
+                     for (label, name) in (("Control", "control"), ("Reduced grazing", "reduced_grazing"))])
+for (_, experiment, modified) in parameter_exercises
+    directory = joinpath(output_base, experiment)
+    checks = [budget_summary(label, joinpath(directory, "$(name)_diagnostics.csv"))
+              for (label, name) in (("Control", "control"), ("Modified", modified))]
+    write_result_assets(experiment, parameter_outputs[experiment], checks)
 end
 
-reference_note = "Reference results and figures are provided in the published workshop documentation."
-function asset_text(filename)
-    path = joinpath(assets_dir, filename)
-    isfile(path) ? read(path, String) : reference_note
-end
+asset_text(name) = read(joinpath(assets_dir, name), String)
 function figure_block(filename, caption)
-    path = joinpath(assets_dir, filename)
-    if !isfile(path) && !quick && !content_only
-        error("Missing documentation figure: $(path). Run a full documentation build to generate it.")
-    end
-    isfile(path) ? "![$caption](../assets/$filename)" : "**$caption:** $reference_note"
+    check_png(joinpath(assets_dir, filename))
+    return "![$caption](../assets/$filename)"
 end
 
 function make_tutorial(filename, replacements)
@@ -235,39 +178,30 @@ for (script, experiment, _) in parameter_exercises
     ))
 end
 
-# The published BATS/NABE comparison is a concise three-figure page, with
-# plots built by 07_bats_nabe.jl; the plotting script is still runnable.
 station_page = joinpath(@__DIR__, "src", "comparison.md.in")
-has_npp_map = isfile(joinpath(root, "data", "maps", "north_atlantic_cafe_npp_2023.png"))
-station_map_credit = if has_npp_map
-    "<small>2023 annual-mean satellite-derived NPP (VIIRS CAFE), masked to open-ocean water deeper than 200 m: " *
-    "[Ocean Productivity](https://orca.science.oregonstate.edu/npp_products.php); " *
-    "[Silsbe et al. (2016)](https://doi.org/10.1002/2016GB005521); " *
-    "Natural Earth bathymetry. Calculated from the monthly numerical data with `scripts/prepare_satellite_npp_map.py`.</small>"
-else
-    "<small>Locator map using [Natural Earth](https://www.naturalearthdata.com/) coastlines. " *
-    "Generate the satellite NPP map using `scripts/prepare_satellite_npp_map.py`.</small>"
-end
+station_credit = "<small>Annual-mean VIIRS CAFE satellite NPP, 2023, masked to water deeper than 200 m. " *
+                 "[Ocean Productivity](https://orca.science.oregonstate.edu/npp_products.php), " *
+                 "[Silsbe et al. (2016)](https://doi.org/10.1002/2016GB005521), " *
+                 "and [Natural Earth](https://www.naturalearthdata.com/downloads/10m-physical-vectors/) bathymetry. " *
+                 "Plotted from numerical data/maps/north_atlantic_cafe_npp_2023.nc.</small>"
 write(joinpath(generated_dir, "07_bats_nabe.md"),
       replace(read(station_page, String),
-              "WORKSHOP_STATION_MAP_CREDIT" => station_map_credit,
+              "WORKSHOP_STATION_MAP_CREDIT" => station_credit,
               "WORKSHOP_STATION_MAP_FIGURE" =>
-                  figure_block("station_map.png", has_npp_map ?
-                               "BATS and NABE on the 2023 annual-mean satellite NPP map" :
-                               "BATS and NABE in the North Atlantic"),
+                  figure_block("station_map.png", "BATS and NABE on the 2023 CAFE satellite NPP map"),
               "WORKSHOP_STATION_FORCING_FIGURE" =>
                   figure_block("station_forcing.png", "Prescribed PAR and seasonal mixing depth"),
               "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
                   figure_block("station_diffusivity.png", "Idealised diffusivity in the upper 300 m")))
 
-# Short appendix: physical inputs, CATKE diffusivity, idealised diffusivity.
+# The publicly documented appendix uses figures generated directly from the
+# classroom forcing. Instructor CATKE runs require additional JLD2 source data
+# and can be explored separately in physics/.
 physics_src = joinpath(@__DIR__, "src", "appendix", "physical_forcing.md.in")
 write(joinpath(generated_dir, "physical_forcing.md"),
       replace(read(physics_src, String),
-              "WORKSHOP_NUMERICALEARTH_INPUTS_FIGURE" =>
-                  figure_block("numericalearth_inputs.png", "NumericalEarth wind-driven currents and hydrography"),
-              "WORKSHOP_NUMERICALEARTH_DIFFUSIVITY_FIGURE" =>
-                  figure_block("numericalearth_diffusivity.png", "CATKE seasonal tracer diffusivity"),
+              "WORKSHOP_STATION_FORCING_FIGURE" =>
+                  figure_block("station_forcing.png", "Idealised seasonal light and mixing depth"),
               "WORKSHOP_STATION_DIFFUSIVITY_FIGURE" =>
                   figure_block("station_diffusivity.png", "Idealised seasonal tracer diffusivity")))
 
@@ -293,9 +227,3 @@ makedocs(
         "Appendix" => ["Physical forcing" => "generated/physical_forcing.md"],
     ],
 )
-
-if get(ENV, "GITHUB_ACTIONS", "false") == "true" &&
-   get(ENV, "GITHUB_REF", "") == "refs/heads/main"
-    repository = ENV["GITHUB_REPOSITORY"]
-    deploydocs(repo = "github.com/$(repository).git", devbranch = "main", versions = nothing)
-end

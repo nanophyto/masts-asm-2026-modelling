@@ -1,36 +1,34 @@
 # Appendix: where the mixing comes from
 
-Tracers are transported by **advection and diffusion**
-([Oceananigans boundary conditions](https://clima.github.io/OceananigansDocumentation/stable/models/boundary_conditions)).
-In our horizontally homogeneous 1D columns, horizontal tracer gradients vanish
-and vertical **fluid** velocity is zero. Wind-driven horizontal velocities *u* and *v*
-can still evolve, but do not advect tracers horizontally. Vertical turbulent
-**diffusivity** therefore describes the physical transport of dissolved tracers;
-particles additionally sink.
+In a horizontally homogeneous 1D column, horizontal tracer gradients and
+vertical **fluid** velocity vanish, although wind-driven horizontal currents
+can evolve. Turbulent diffusion mixes dissolved tracers vertically, while
+particles also sink under gravity. See [Oceananigans boundary conditions](https://clima.github.io/OceananigansDocumentation/stable/models/boundary_conditions).
 
-## 1. NumericalEarth physical inputs and response
+## 1. Classroom light and mixing
 
-This figure was generated using [NumericalEarth.jl](https://github.com/NumericalEarth/NumericalEarth.jl)
-with the [CATKE turbulence model](https://clima.github.io/OceananigansDocumentation/stable/models/turbulence_closures),
-[JRA55 atmospheric forcing](https://jra.kishou.go.jp/JRA-55/index_en.html), and
-[EN4 initial temperature and salinity](https://www.metoffice.gov.uk/hadobs/en4/),
-following the [NumericalEarth documentation](https://numericalearth.github.io/NumericalEarthDocumentation/stable/).
-It shows the wind-driven current response and hydrography in a 1D ocean column.
+These curves are calculated from the **same functions** used in the workshop's
+BATS and NABE biological simulations. They show how light and prescribed
+seasonal mixing vary between sites.
 
-WORKSHOP_NUMERICALEARTH_INPUTS_FIGURE
+WORKSHOP_STATION_FORCING_FIGURE
 
-## 2. Resulting vertical diffusivity
+## 2. Vertical tracer diffusivity
 
-The CATKE model produces seasonally varying mixing, including short-lived events.
-
-WORKSHOP_NUMERICALEARTH_DIFFUSIVITY_FIGURE
-
-## 3. Smooth idealised forcing
-
-The classroom uses a smooth seasonal approximation so changes in production and
-export can be related to biological processes without following individual
-weather events. The prescribed mixing depth varies through the year, with strong
-mixing above it and weaker mixing below. Both stations use the upper 300 m of the
-water column in these plots.
+The idealised diffusivity is strong in the mixed layer and weak below it. The
+panels show the upper 300 m; the dashed curves mark the prescribed mixing
+depth. Both figures are regenerated on every documentation build.
 
 WORKSHOP_STATION_DIFFUSIVITY_FIGURE
+
+## 3. Origin of the physical idealisation
+
+The seasonal forcing was informed by 1D ocean simulations built with
+[NumericalEarth.jl](https://numericalearth.github.io/NumericalEarthDocumentation/stable/)
+and [Oceananigans' CATKE turbulence model](https://clima.github.io/OceananigansDocumentation/stable/models/turbulence_closures),
+using [JRA55 atmospheric forcing](https://jra.kishou.go.jp/JRA-55/index_en.html)
+and [EN4 initial temperature and salinity](https://www.metoffice.gov.uk/hadobs/en4/).
+The source calculations are described in [`physics/README.md`](https://github.com/nanophyto/masts-asm-2026-modelling/blob/main/physics/README.md).
+The classroom figures above are generated directly from the present-day
+idealised forcing, so the published results remain reproducible with the
+small inputs in this repository.

@@ -2,8 +2,8 @@
 # Usage: julia --threads=1 --project=oceanbiome physics/plot_appendix_physics.jl \
 #   outputs/physics/bats_catke_spin365d_365d.jld2 \
 #   outputs/physics/nabe_catke_spin365d_365d.jld2 \
-#   docs/src/assets/numericalearth_inputs.png \
-#   docs/src/assets/numericalearth_diffusivity.png
+#   outputs/physics/numericalearth_inputs.png \
+#   outputs/physics/numericalearth_diffusivity.png
 
 using CairoMakie, MASTSWorkshop
 using Oceananigans: FieldTimeSeries

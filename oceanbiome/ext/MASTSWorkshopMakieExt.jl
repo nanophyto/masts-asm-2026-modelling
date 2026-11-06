@@ -330,9 +330,9 @@ end
 # North Atlantic locator map. The tiny coastline asset is a clipped, simplified
 # public-domain Natural Earth 1:110m layer, committed for offline docs builds.
 function MASTSWorkshop.plot_station_map(filename::AbstractString; preview::Bool = isinteractive())
-    # Reproducible satellite CAFE NPP map, plotted from numerical monthly data
-    # by scripts/prepare_satellite_npp_map.py. The Natural Earth locator is
-    # retained until the small derived NetCDF and rendered map are generated.
+    # CI renders the map from the curated numerical NetCDF via
+    # scripts/plot_satellite_npp_map.py. Participant installations retain a
+    # lightweight Natural Earth locator if no generated map is available.
     npp_map = joinpath(@__DIR__, "..", "..", "data", "maps",
                        "north_atlantic_cafe_npp_2023.png")
     if isfile(npp_map)
@@ -427,88 +427,6 @@ function MASTSWorkshop.plot_station_diffusivity(filename::AbstractString;
                      ticks = [1e-4, 1e-3, 1e-2])
         end
     end
-    save(filename, figure)
-    preview && display(figure)
-    return filename
-end
-
-# Observed monthly *means only* are plotted over the smooth idealised
-# seasonal forcing. Positive-down depths increase downwards in both panels.
-# The complete GOSML distribution remains available in the source CSV.
-function MASTSWorkshop.plot_mld_comparison(comparison, filename::AbstractString;
-                                           preview::Bool = isinteractive())
-    stations = (:BATS, :NABE)
-    deepest = maximum(max(maximum(getproperty(comparison, station).observed_mean),
-                          maximum(getproperty(comparison, station).model_daily))
-                      for station in stations)
-    limit = max(250.0, 50 * ceil(deepest / 50))
-    figure = Figure(size = (1450, 650), fontsize = 15)
-    Label(figure[0, 1:2], "Observed mean vs idealised mixed-layer depth: BATS and NABE";
-          fontsize = 22, font = :bold)
-    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    legend_entries = nothing
-    legend_labels = ["Idealised forcing", "GOSML monthly mean"]
-    for (column, station) in enumerate(stations)
-        data = getproperty(comparison, station)
-        axis = Axis(figure[1, column]; title = string(station), xlabel = "Month",
-                    ylabel = "Mixed-layer depth (m; negative down)",
-                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4)
-        idealised = lines!(axis, data.month_x, .-data.model_daily;
-                           color = :orangered, linewidth = 3)
-        observed = scatter!(axis, data.months, .-data.observed_mean;
-                            color = :royalblue, marker = :circle, markersize = 12)
-        isnothing(legend_entries) && (legend_entries = [idealised, observed])
-        xlims!(axis, 0.5, 12.5)
-        ylims!(axis, -limit, 0)
-    end
-    Legend(figure[2, 1:2], legend_entries, legend_labels;
-           orientation = :horizontal, framevisible = true,
-           tellwidth = false, tellheight = true)
-    Label(figure[3, 1:2],
-          "NOAA GOSML (Johnson & Lyman, 2022): points are observed monthly means; " *
-          "lines are the prescribed daily forcing.";
-          fontsize = 12)
-    rowsize!(figure.layout, 2, Auto())
-    rowsize!(figure.layout, 3, Auto())
-    save(filename, figure)
-    preview && display(figure)
-    return filename
-end
-
-# NASA POWER point climatology: blue observed monthly-mean points and smooth,
-# observationally fitted daily-mean forcing, on a common W/m^2 scale.
-function MASTSWorkshop.plot_par_comparison(comparison, filename::AbstractString;
-                                           preview::Bool = isinteractive())
-    stations = (:BATS, :NABE)
-    maximum_PAR = maximum(max(maximum(getproperty(comparison, station).observed_mean),
-                              maximum(getproperty(comparison, station).model_daily))
-                          for station in stations)
-    limit = max(50.0, 25 * ceil(1.12 * maximum_PAR / 25))
-    figure = Figure(size = (1450, 650), fontsize = 15)
-    Label(figure[0, 1:2], "Observed mean vs idealised surface PAR: BATS and NABE";
-          fontsize = 22, font = :bold)
-    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    legend_entries = nothing
-    for (column, station) in enumerate(stations)
-        data = getproperty(comparison, station)
-        axis = Axis(figure[1, column]; title = string(station), xlabel = "Month",
-                    ylabel = "Daily-mean PAR (W m⁻²)",
-                    xticks = (1:12, month_labels), xticklabelrotation = pi / 4)
-        idealised = lines!(axis, data.month_x, data.model_daily;
-                           color = :orangered, linewidth = 3)
-        observed = scatter!(axis, data.months, data.observed_mean;
-                            color = :royalblue, markersize = 12)
-        isnothing(legend_entries) && (legend_entries = [idealised, observed])
-        xlims!(axis, 0.5, 12.5)
-        ylims!(axis, 0, limit)
-    end
-    Legend(figure[2, 1:2], legend_entries, ["Idealised forcing", "NASA POWER monthly mean"];
-           orientation = :horizontal, framevisible = false, tellwidth = false)
-    Label(figure[3, 1:2],
-          "NASA POWER / CERES (2001–2020): points are observed monthly means; " *
-          "lines are smooth daily-mean forcing."; fontsize = 12)
     save(filename, figure)
     preview && display(figure)
     return filename

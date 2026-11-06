@@ -122,18 +122,18 @@ the [grazing experiment](generated/01_grazing.md),
 [phytoplankton mortality](generated/06_phytoplankton_mortality.md), or the
 [physical-forcing appendix](generated/physical_forcing.md).
 
-## Preparing the BATS/NABE observational references
+## Rebuild documentation from scratch
 
-The full documentation build compares GOSML mixed-layer depth and NASA POWER
-surface PAR at BATS and NABE. Generate both committed observational references
-using the isolated `masts-gosml` Conda environment:
+The documentation workflow reruns **all 365-day biological experiments** and
+creates every published PNG and console summary from its input files. The
+2023 VIIRS CAFE map is regenerated from the numerical NetCDF in `data/maps/`.
 
 ```bash
-conda env create -f scripts/gosml-environment.yml
-conda run -n masts-gosml python scripts/prepare_mld_climatology.py
-conda run -n masts-gosml python scripts/prepare_par_climatology.py
+python -m pip install numpy scipy matplotlib
+julia --threads=1 --project=docs docs/make.jl
+python scripts/check_documentation_images.py docs/build
 ```
 
-The PAR script also updates the compiled Julia forcing coefficients. Commit the
-small CSV/JSON references and generated coefficient file to make builds
-reproducible on GitHub Actions and workshop workstations.
+The site is written to `docs/build/`. Generated images, logs, temporary model
+results and the website itself are ignored by Git. GitHub Actions rebuilds the
+site on every pull request and publishes it from the `main` branch.

@@ -1,7 +1,5 @@
 name: Documentation and Pages
 
-# One documentation build per PR update, then another on main for publication.
-# Feature-branch pushes are covered by the pull_request event.
 on:
   pull_request:
     branches: [main]
@@ -27,31 +25,33 @@ jobs:
       JULIA_PKG_PRECOMPILE_AUTO: "0"
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install map plotting dependencies
+        run: python -m pip install numpy scipy matplotlib
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1.10'
-      # Cache Julia dependencies for speed; simulations and figures run afresh.
+      # Cache Julia *packages*, not simulation results or documentation figures.
       - uses: julia-actions/cache@v3
         with:
           delete-old-caches: false
+      - name: Require inputs rather than committed outputs
+        shell: bash
+        run: |
+          test -s data/maps/north_atlantic_cafe_npp_2023.nc
+          if [[ -n "$(git ls-files docs/src/assets docs/src/generated workshop/results 'data/maps/*.png')" ]]; then
+            echo 'Generated documentation assets or participant results are tracked.' >&2
+            exit 1
+          fi
       - name: Instantiate documentation environment
         run: julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
-      - name: Test documentation image validator
-        run: python3 -m unittest discover -s scripts -p 'test_documentation_images.py'
-      - name: Build OceanBioME figures and documentation
-        env:
-          DOCS_QUICK: "false"
-          DOCS_CONTENT_ONLY: "false"
-          DOCS_REUSE_RESULTS: "false"
-        # Rebuild ecology exercises, the three physical-comparison plots and
-        # the documentation. CATKE appendix reference images are committed.
-        # GitHub Pages deployment is handled by the official actions below.
-        run: |
-          rm -rf outputs/oceanbiome/reference_docs
-          env -u GITHUB_ACTIONS julia --startup-file=no --project=docs docs/make.jl
-      - name: Verify generated pages and figure links
-        run: python3 scripts/check_documentation_images.py docs/build
-      - name: Upload documentation artifact
+      - name: Regenerate all figures, simulations and documentation
+        run: julia --startup-file=no --threads=1 --project=docs docs/make.jl
+      - name: Check generated figures and documentation links
+        run: python scripts/check_documentation_images.py docs/build
+      - name: Upload documentation build artifact
         uses: actions/upload-artifact@v4
         with:
           name: workshop-documentation

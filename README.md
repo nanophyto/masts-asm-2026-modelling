@@ -1,41 +1,38 @@
-# MASTS ASM 2026 modelling materials
+# MASTS ASM 2026 — Modelling for biogeochemists
 
-This repository contains the OceanBioME workshop exercises, supporting data,
-and the Documenter source used for the accompanying notes.
+A practical OceanBioME/Julia workshop with the BATS and NABE column comparison,
+biological parameter experiments, and a separate Abil.py exercise.
 
-## If you downloaded a zip file
+- [Participant starting instructions](workshop/START_HERE.md)
+- [Julia environment and scientific tests](oceanbiome/README.md)
+- [Optional NumericalEarth physics](physics/README.md)
+- [Running on your own system](docs/src/running_locally.md)
 
-From a terminal:
+## Rebuild the documentation
 
-```bash
-unzip npp_doc_work.zip
-cd npp_doc_work
-```
-
-If your zip has a different filename, substitute that instead.
-
-Then start with:
-
-- `workshop/START_HERE.md` for the hands-on exercises
-- `docs/src/index.md` for the documentation source
-- `oceanbiome/README.md` for the Julia package environment
-
-## Quick workshop run
-
-From the repository root:
+Documentation figures, 365-day model output, console summaries and the Pages
+site are **generated anew by GitHub Actions** on every PR and on `main`.
+Their source files and the small curated observations are committed; generated
+PNGs, CSV summaries, JLD2 outputs and HTML are ignored by Git.
 
 ```bash
-cd workshop
-julia --project=../oceanbiome 01_OceanBioME/00_reference_column.jl
+python -m pip install numpy scipy matplotlib
+julia --threads=1 --project=docs docs/make.jl
+python scripts/check_documentation_images.py docs/build
 ```
 
-## Regenerating the BATS/NABE locator map
+The numerical 2023 VIIRS CAFE map input is retained at
+`data/maps/north_atlantic_cafe_npp_2023.nc`. Its PNG and the other published
+figures are regenerated from source code, with no upstream downloads during
+CI builds.
 
-The station map now uses the **VIIRS CAFE** satellite productivity product,
-masked to **open-ocean waters deeper than 200 m**.
+## Run scientific smoke tests
 
 ```bash
-conda env create -f scripts/npp-map-environment.yml
-conda activate masts-npp-map
-python scripts/prepare_satellite_npp_map.py --year 2023
+julia --threads=1 --project=oceanbiome oceanbiome/test/runtests.jl
+python -m unittest discover -s abil/tests -p 'test_*.py' -v
 ```
+
+The full scientific documentation build also validates the figures and annual
+budget checks for every exercise. The container image can be tested through
+the manual publish-workflow and `scripts/test_container.sh`.

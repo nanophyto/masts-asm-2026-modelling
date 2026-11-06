@@ -1,21 +1,32 @@
-outputs/
+# Ephemeral simulation results and logs
+/outputs/
+/workshop/results/
 *.jld2
+*.log
+
+# Documentation is built from scratch in CI. None of its outputs are tracked.
+/docs/build/
+/docs/src/assets/
+/docs/src/generated/
+
+# Generated satellite map raster; the numerical NetCDF below is the input.
+/data/maps/*.png
 *.nc
-!data/maps/north_atlantic_cafe_npp_2023.nc
+!/data/maps/north_atlantic_cafe_npp_2023.nc
+
+# Local Python / Julia tooling and editor state
 __pycache__/
+*.py[cod]
 .pytest_cache/
 .venv/
 .vscode/
 .julia/
-*.log
 .DS_Store
-docs/build/
-docs/src/generated/
 
-# Generated Abil BATS example outputs and downloaded upstream inputs
-workshop/02_Abil/BATS_*.png
-workshop/02_Abil/ModelOutput/
-workshop/02_Abil/data/*.csv
+# Downloaded Abil observations and output files
+/workshop/02_Abil/BATS_*.png
+/workshop/02_Abil/ModelOutput/
+/workshop/02_Abil/data/
 
-# NOAA GOSML raw inputs; source files are downloaded explicitly by scripts/prepare_mld_climatology.py
-data/observations/raw/
+# Local atmospheric and mixed-layer raw archives
+/data/observations/raw/
