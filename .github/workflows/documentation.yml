@@ -1,4 +1,4 @@
-name: Documentation and Pages
+name: Workshop landing page
 
 on:
   pull_request:
@@ -9,75 +9,45 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: landing-page-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  check:
+    name: Validate landing page
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    env:
-      JULIA_NUM_THREADS: "1"
-      JULIA_PKG_PRECOMPILE_AUTO: "0"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
-      - name: Install map plotting dependencies
-        run: python -m pip install numpy scipy matplotlib
-      - uses: julia-actions/setup-julia@v3
-        with:
-          version: '1.10'
-      # Cache Julia *packages*, not simulation results or documentation figures.
-      - uses: julia-actions/cache@v3
-        with:
-          delete-old-caches: false
-      - name: Require inputs rather than committed outputs
-        shell: bash
+          python-version: '3.12'
+      - name: Check workstation configuration and importer
         run: |
-          test -s data/maps/north_atlantic_cafe_npp_2023.nc
-          if [[ -n "$(git ls-files docs/src/assets docs/src/generated workshop/results 'data/maps/*.png')" ]]; then
-            echo 'Generated documentation assets or participant results are tracked.' >&2
-            exit 1
-          fi
-      - name: Instantiate documentation environment
-        run: julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
-      - name: Regenerate all figures, simulations and documentation
-        run: julia --startup-file=no --threads=1 --project=docs docs/make.jl
-      - name: Check generated figures and documentation links
-        run: python scripts/check_documentation_images.py docs/build
-      - name: Upload documentation build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: workshop-documentation
-          path: docs/build/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Configure GitHub Pages
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
-      - name: Upload website for GitHub Pages
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: docs/build/
+          python3 scripts/update_landing_page.py --check
+          python3 -m unittest discover -s tests -p 'test_landing_*.py' -v
+      - name: Check browser JavaScript syntax
+        run: node --check site/app.js
 
   deploy:
+    name: Publish landing page
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+    needs: check
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Publish site
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+      - name: Deploy landing page
         id: deployment
         uses: actions/deploy-pages@v4

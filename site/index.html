@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102d37">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="MASTS ASM 2026 Abil.py workshop — find and open your assigned cloud workstation.">
+  <title>MASTS ASM 2026 | Abil.py Workstations</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="wordmark" href="./" aria-label="Workshop home">
+        <span class="wordmark-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>MASTS <span class="wordmark-divider">/</span> ASM 2026</span>
+      </a>
+      <span class="header-caption">ABIL.PY PRACTICAL</span>
+    </header>
+
+    <main>
+      <section class="station-section" id="stations" aria-labelledby="station-heading">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">THURSDAY 12 NOVEMBER 2026 &middot; 10:50–15:15 GMT</p>
+            <h1 id="station-heading">Find your workstation</h1>
+            <p>Find the name from your <strong>@nanophyto.org</strong> Google account and open your dedicated Python workstation.</p>
+          </div>
+          <div class="availability" id="availability" role="status" aria-live="polite">Loading workstations…</div>
+        </div>
+        <label class="search-label" for="station-search">Your account name</label>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.2"/><path d="m16.3 16.3 5 5"/></svg>
+          <input id="station-search" type="search" autocomplete="off" placeholder="e.g. amazinganemone@nanophyto.org" aria-controls="station-list">
+          <span class="search-key" aria-hidden="true">29 accounts</span>
+        </div>
+        <p class="station-message" id="station-message" role="status" aria-live="polite"></p>
+        <div id="station-list" class="station-grid" aria-label="Available workstation links"></div>
+      </section>
+    </main>
+    <footer class="site-footer"><span>MASTS ASM 2026 <span class="footer-dot">·</span> Abil.py practical</span><span>Hosted on GitHub Pages <span class="footer-dot">·</span> Powered by Google Cloud Workstations</span></footer>
+  </div>
+</body>
+</html>

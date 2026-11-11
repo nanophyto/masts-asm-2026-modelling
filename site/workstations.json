@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "accounts": [
+    {
+      "name": "Amazing Anenome",
+      "username": "amazinganemone",
+      "url": null
+    },
+    {
+      "name": "Bouncy Barnacle",
+      "username": "bouncybarnacle",
+      "url": null
+    },
+    {
+      "name": "Brilliant Beluga",
+      "username": "brilliantbeluga",
+      "url": null
+    },
+    {
+      "name": "Cheerful Crab",
+      "username": "cheerfulcrab",
+      "url": null
+    },
+    {
+      "name": "Clever Clownfish",
+      "username": "cleverclownfish",
+      "url": null
+    },
+    {
+      "name": "Curious Cuttlefish",
+      "username": "curiouscuttlefish",
+      "url": null
+    },
+    {
+      "name": "Dancing Dolphin",
+      "username": "dancingdolphin",
+      "url": null
+    },
+    {
+      "name": "Delightful Dugong",
+      "username": "delightfuldugong",
+      "url": null
+    },
+    {
+      "name": "Eager Eel",
+      "username": "eagereel",
+      "url": null
+    },
+    {
+      "name": "Friendly Flounder",
+      "username": "friendlyflounder",
+      "url": null
+    },
+    {
+      "name": "Generous Guppy",
+      "username": "generousguppy",
+      "url": null
+    },
+    {
+      "name": "Gentle Grouper",
+      "username": "gentlegrouper",
+      "url": null
+    },
+    {
+      "name": "Happy Hammerhead",
+      "username": "happyhammerhead",
+      "url": null
+    },
+    {
+      "name": "Jazzy Jellyfish",
+      "username": "jazzyjellyfish",
+      "url": null
+    },
+    {
+      "name": "Kind Krill",
+      "username": "kindkrill",
+      "url": null
+    },
+    {
+      "name": "Lively Lobster",
+      "username": "livelylobster",
+      "url": null
+    },
+    {
+      "name": "Merry Manta",
+      "username": "merrymanta",
+      "url": null
+    },
+    {
+      "name": "Nimble Narwhal",
+      "username": "nimblenarwhal",
+      "url": null
+    },
+    {
+      "name": "Optimistic Octopus",
+      "username": "optimisticoctopus",
+      "url": null
+    },
+    {
+      "name": "Playful Puffin",
+      "username": "playfulpuffin",
+      "url": null
+    },
+    {
+      "name": "Proud Porpoise",
+      "username": "proudporpoise",
+      "url": null
+    },
+    {
+      "name": "Radiant Ray",
+      "username": "radiantray",
+      "url": null
+    },
+    {
+      "name": "Smiling Squid",
+      "username": "smilingsquid",
+      "url": null
+    },
+    {
+      "name": "Sunny Seahorse",
+      "username": "sunnyseahorse",
+      "url": null
+    },
+    {
+      "name": "Terrific Turtle",
+      "username": "terrificturtle",
+      "url": null
+    },
+    {
+      "name": "Vibrant Viperfish",
+      "username": "vibrantviperfish",
+      "url": null
+    },
+    {
+      "name": "Wise Walrus",
+      "username": "wisewalrus",
+      "url": null
+    },
+    {
+      "name": "Wonderful Walrus",
+      "username": "wonderfulwalrus",
+      "url": null
+    },
+    {
+      "name": "Zesty Zebrafish",
+      "username": "zestyzebrafish",
+      "url": null
+    }
+  ]
+}
