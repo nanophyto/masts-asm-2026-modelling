@@ -1,0 +1,63 @@
+---
+  root: ./
+  run_name: pro_surf_reg #update for specific run name
+
+  path_out:  ModelOutput/ #root + folder
+  path_in:  predictions/ens/ #root + folder
+
+  prediction: data/env_data_surf.csv #root + folder
+  targets: data/traits_pro.csv #root + folder
+  training: data/training_pro.csv #root + folder
+
+  predictors: ["temperature", "no3", "o2", "PAR"]
+ 
+    
+  verbose: 1
+  seed : 1 # random seed
+  n_threads : 10 # how many cpu threads to use (local)
+  cv : 10
+
+  ensemble_config: 
+    classifier: False
+    regressor: True
+    m1: "rf"
+    m2: "knn"
+#    m3: "xgb"
+     
+  upsample: False
+  stratify: False
+
+  reg_scoring:
+   R2: r2
+   MAE: neg_mean_absolute_error
+   RMSE: neg_root_mean_squared_error
+
+  param_grid:
+    rf_param_grid:
+      reg_param_grid:
+        n_estimators: [100]
+        max_features:  [0.8]
+        max_depth: [51]
+        min_samples_leaf: [1]
+        max_samples: [0.9]   
+
+    xgb_param_grid:
+      reg_param_grid:  
+        learning_rate: [0.1]
+        n_estimators: [100]
+        max_depth: [7]
+        subsample: [0.4, 0.6]
+        colsample_bytree: [1.0]
+        gamma: [0] 
+        reg_alpha: [0]
+
+    knn_param_grid:
+      reg_param_grid:  
+        max_samples: [0.9]
+        max_features: [0.8]
+        estimator__leaf_size: [30]
+        estimator__n_neighbors: [3]
+        estimator__p:  [1]        
+        estimator__weights: ["distance"]
+
+  knn_bagging_estimators: 40
