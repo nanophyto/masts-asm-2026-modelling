@@ -26,7 +26,6 @@ __pycache__/
 # Downloaded Abil observations and output files
 /workshop/02_Abil/BATS_*.png
 /workshop/02_Abil/ModelOutput/
-/workshop/02_Abil/data/
 
 # Local atmospheric and mixed-layer raw archives
 /data/observations/raw/
