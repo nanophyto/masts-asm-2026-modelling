@@ -7,25 +7,27 @@ import sys
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 WORKSHOP_FOLDER = "/home/user/masts-asm-2026-modelling/workshop"
+ABIL_FOLDER = WORKSHOP_FOLDER + "/02_Abil"
 
 
-def launch_url(url: str) -> str:
+def launch_url(url: str, folder: str = WORKSHOP_FOLDER) -> str:
     parsed = urlsplit(url)
-    if parsed.scheme != "https" or not parsed.hostname or not parsed.hostname.endswith(".cloudworkstations.dev"):
+    if (parsed.scheme != "https" or parsed.username or parsed.password
+            or not parsed.hostname or not parsed.hostname.endswith(".cloudworkstations.dev")):
         raise ValueError(f"Not a Cloud Workstations URL: {url}")
     query = [(key, value) for key, value in parse_qsl(parsed.query, keep_blank_values=True)
              if key != "folder"]
-    query.append(("folder", WORKSHOP_FOLDER))
+    query.append(("folder", folder))
     return urlunsplit(parsed._replace(query=urlencode(query)))
 
 
-def parse_status(lines):
+def parse_status(lines, folder: str = WORKSHOP_FOLDER):
     """Extract assigned workstation rows from workshop.sh status text."""
     for line in lines:
         fields = line.split()
         if (len(fields) == 4 and fields[1].startswith("STATE_")
                 and "@" in fields[2] and fields[3].startswith("https://")):
-            yield fields[0], fields[2], launch_url(fields[3])
+            yield fields[0], fields[2], launch_url(fields[3], folder=folder)
 
 
 def main() -> int:
