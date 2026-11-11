@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": "/opt/workshop/python/bin/python",
+  "python.terminal.activateEnvironment": false,
+  "jupyter.askForKernelRestart": false,
+  "telemetry.telemetryLevel": "off"
+}

@@ -13,7 +13,7 @@
 
   verbose: 3
   seed : 1 # random seed
-  n_threads : 12 # how many cpu threads to use (local)
+  n_threads : 8 # how many cpu threads to use (local)
   cv : 10
 
   ensemble_config: 

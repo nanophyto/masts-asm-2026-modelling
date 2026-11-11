@@ -1,12 +1,15 @@
+# Single source of truth for the Abil.py workshop Conda environment.
+# Abil.py installs its own scientific dependencies (including XGBoost) via pip;
+# only the Python runtime and notebook-specific additions are listed here.
 name: abil-tutorial-env
 channels:
-- conda-forge
+  - conda-forge
 dependencies:
-- python=3.11
-- ipykernel
-- cartopy
-- matplotlib
-- pip
-- gcc
-- pip:
-  - abil
+  - python=3.11
+  - pip
+  - ipykernel
+  - cartopy
+  - matplotlib=3.9.4
+  - seaborn=0.13.2
+  - pip:
+      - abil==26.5.4.post2

@@ -47,8 +47,8 @@ def normalize_account(value: str, config) -> str:
 def load_config(path=DATA_FILE):
     config = json.loads(Path(path).read_text(encoding="utf-8"))
     accounts = config.get("accounts", [])
-    if config.get("schemaVersion") != 2 or len(accounts) != 29:
-        raise ValueError("Configuration must contain exactly 29 workshop accounts (schema version 2)")
+    if config.get("schemaVersion") != 2 or len(accounts) != 28:
+        raise ValueError("Configuration must contain exactly 28 workshop accounts (schema version 2)")
     seen = set()
     for item in accounts:
         if set(item) != {"name", "username", "url"}:

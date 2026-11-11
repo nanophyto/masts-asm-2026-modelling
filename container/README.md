@@ -1,3 +1,25 @@
+## Active image: Abil.py-only (12 November 2026)
+
+Build from `container/Dockerfile.abil`, using
+`workshop/02_Abil/environment.yml` as the authoritative Python spec:
+
+```bash
+sudo docker build --platform linux/amd64 --progress=plain \
+  -f container/Dockerfile.abil -t masts-asm-2026-modelling:abil-only .
+sudo ./scripts/test_abil_container.sh masts-asm-2026-modelling:abil-only
+```
+
+This image includes Python 3.11, Abil.py, Jupyter, browser Code OSS, and
+the notebook examples. `n_threads: 8` is set in each model YAML. Abil manages
+its scientific dependency versions, and the container runtime check exercises
+XGBoost training. The validation accepts only the known XGBoost wheel
+metadata warning after the native library fit passes.
+
+The GitHub Actions manual image workflow builds **this** Dockerfile.
+The historical combined Julia image documentation is retained below.
+
+---
+
 # Combined scientific image (Cycle 1.4)
 
 This image extends Google's Code OSS for Cloud Workstations base and includes

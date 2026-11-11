@@ -17,9 +17,12 @@ from zipfile import ZipFile
 LANGUAGE_EXTENSIONS = {
     "julialang.language-julia": ("julia.vsix", "1.250.2"),
     "ms-python.python": ("python.vsix", "2026.4.0"),
+    "ms-toolsai.jupyter": ("jupyter.vsix", "2025.9.1"),
 }
 EXTENSIONS = {**LANGUAGE_EXTENSIONS,
               "devyas319.csv-interactive-table-viewer": ("csv.vsix", "0.1.5")}
+ABIL_EXTENSIONS = {key: value for key, value in EXTENSIONS.items()
+                   if key != "julialang.language-julia"}
 
 
 def verify_vsix_files(vsix_dir: Path, packages=EXTENSIONS) -> None:
@@ -43,10 +46,10 @@ def _installed_versions(cli: Path) -> set[str]:
     return {line.strip().lower() for line in output.splitlines()}
 
 
-def ensure_extensions(cli: Path, vsix_dir: Path) -> None:
+def ensure_extensions(cli: Path, vsix_dir: Path, packages=EXTENSIONS) -> None:
     """Install missing/mismatched versions once per persistent workstation home."""
     versions = _installed_versions(cli)
-    for extension_id, (filename, version) in EXTENSIONS.items():
+    for extension_id, (filename, version) in packages.items():
         desired = f"{extension_id}@{version}".lower()
         if desired not in versions:
             vsix = vsix_dir / filename
@@ -59,7 +62,7 @@ def ensure_extensions(cli: Path, vsix_dir: Path) -> None:
         else:
             print(f"Already installed: {desired}")
     versions = _installed_versions(cli)
-    missing = [f"{eid}@{ver}" for eid, (_, ver) in EXTENSIONS.items()
+    missing = [f"{eid}@{ver}" for eid, (_, ver) in packages.items()
                if f"{eid}@{ver}".lower() not in versions]
     if missing:
         raise RuntimeError(f"Code OSS did not register: {', '.join(missing)}")
@@ -71,11 +74,14 @@ def main() -> None:
         verify_vsix_files(Path(sys.argv[2]))
     elif len(sys.argv) == 3 and sys.argv[1] == "verify-language":
         verify_vsix_files(Path(sys.argv[2]), LANGUAGE_EXTENSIONS)
-    elif len(sys.argv) == 4 and sys.argv[1] == "ensure":
-        ensure_extensions(Path(sys.argv[2]), Path(sys.argv[3]))
+    elif len(sys.argv) == 3 and sys.argv[1] == "verify-abil":
+        verify_vsix_files(Path(sys.argv[2]), ABIL_EXTENSIONS)
+    elif len(sys.argv) == 4 and sys.argv[1] in ("ensure", "ensure-abil"):
+        packages = ABIL_EXTENSIONS if sys.argv[1] == "ensure-abil" else EXTENSIONS
+        ensure_extensions(Path(sys.argv[2]), Path(sys.argv[3]), packages)
     else:
-        sys.exit("Usage: ensure_language_extensions.py verify[-language] VSIX_DIR | "
-                 "ensure CODE_OSS_CLI VSIX_DIR")
+        sys.exit("Usage: ensure_language_extensions.py verify|verify-language|verify-abil VSIX_DIR | "
+                 "ensure|ensure-abil CODE_OSS_CLI VSIX_DIR")
 
 
 if __name__ == "__main__":

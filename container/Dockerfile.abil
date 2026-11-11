@@ -1,0 +1,94 @@
+# syntax=docker/dockerfile:1
+# Dedicated Abil.py notebook image for Cloud Workstations.
+# No Julia runtimes, OceanBioME dependencies, or Julia warm-up.
+FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
+
+ARG TARGETARCH
+ARG SOURCE_REPOSITORY=""
+ARG PYTHON_EXTENSION_VERSION=2026.4.0
+ARG JUPYTER_EXTENSION_VERSION=2025.9.1
+ARG CSV_EXTENSION_VERSION=0.1.5
+
+LABEL org.opencontainers.image.title="MASTS ASM 2026 - Abil.py workshop" \
+      org.opencontainers.image.description="Python 3.11, Abil.py and Jupyter on Cloud Workstations" \
+      org.opencontainers.image.source="${SOURCE_REPOSITORY}"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONNOUSERSITE=1 \
+    PATH=/opt/workshop/python/bin:${PATH}
+
+# Pinned Miniforge installer; keep dependency changes separate from notebooks
+# to let subsequent notebook edits reuse the solved Conda layer.
+RUN test "${TARGETARCH}" = "amd64" \
+    && /google/scripts/refresh-preinstalled-apt-keys.sh \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl git unzip fontconfig fonts-dejavu-core \
+       libgl1 libegl1 libxrender1 libxext6 libglib2.0-0 time \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fL --retry 4 --retry-delay 2 \
+      https://github.com/conda-forge/miniforge/releases/download/25.3.0-3/Miniforge3-25.3.0-3-Linux-x86_64.sh \
+      -o /tmp/miniforge.sh \
+    && echo '1b57f8cb991982063f79b56176881093abb1dc76d73fda32102afde60585b5a1  /tmp/miniforge.sh' | sha256sum -c - \
+    && bash /tmp/miniforge.sh -b -p /opt/miniforge \
+    && rm /tmp/miniforge.sh
+
+# Source of truth: workshop/02_Abil/environment.yml.
+COPY workshop/02_Abil/environment.yml /tmp/abil-environment.yml
+RUN /opt/miniforge/bin/conda env create -y \
+      --prefix /opt/workshop/python --file /tmp/abil-environment.yml \
+    && /opt/miniforge/bin/conda clean -afy \
+    && /opt/workshop/python/bin/python -m ipykernel install \
+      --prefix /opt/workshop/python --name abil-tutorial-env \
+      --display-name 'Abil.py (Python 3.11)'
+
+# Code OSS is preinstalled in the Cloud Workstations base image. Bundle the
+# Python/Jupyter/CSV extensions for offline installation into persistent homes.
+RUN mkdir -p /opt/workshop/vsix \
+    && curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/ms-python/python/${PYTHON_EXTENSION_VERSION}/file/ms-python.python-${PYTHON_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/python.vsix \
+    && curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/ms-toolsai/jupyter/${JUPYTER_EXTENSION_VERSION}/file/ms-toolsai.jupyter-${JUPYTER_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/jupyter.vsix \
+    && curl -fL --retry 4 --retry-delay 2 \
+      "https://open-vsx.org/api/devyas319/csv-interactive-table-viewer/${CSV_EXTENSION_VERSION}/file/devyas319.csv-interactive-table-viewer-${CSV_EXTENSION_VERSION}.vsix" \
+      -o /opt/workshop/vsix/csv.vsix
+
+COPY container/ensure_language_extensions.py /opt/workshop/ensure_language_extensions.py
+COPY container/configure_editor.py /opt/workshop/configure_editor.py
+RUN /opt/workshop/python/bin/python /opt/workshop/ensure_language_extensions.py \
+      verify-abil /opt/workshop/vsix \
+    && /opt/workshop/python/bin/python /opt/workshop/configure_editor.py \
+      remove-google-ai /opt/code-oss/extensions \
+    && /opt/workshop/python/bin/python /opt/workshop/configure_editor.py \
+      remove-google-ai /opt/code-oss/resources/app/extensions
+
+# Only Abil.py teaching materials and Python-based checks are included.
+# Preserve the original directory structure for notebook-relative paths and
+# launch links from workshops.nanophyto.org.
+COPY workshop/02_Abil /opt/workshop/source/workshop/02_Abil
+COPY abil /opt/workshop/source/abil
+COPY container/check_abil_notebooks.py /opt/workshop/source/container/check_abil_notebooks.py
+WORKDIR /opt/workshop/source
+
+# Install the original pinned BATS reference CSVs so the illustrative script
+# is usable even when participants' instances have no external network access.
+RUN /opt/workshop/python/bin/python abil/fetch_bats_data.py \
+      --dest /opt/workshop/source/workshop/02_Abil/data
+RUN /opt/workshop/python/bin/python container/check_abil_notebooks.py \
+    && /opt/workshop/python/bin/python -m unittest discover \
+      -s abil/tests -p 'test_*.py' -v
+
+# Google's Workstations entrypoint creates /home/user and runs the numbered
+# startup scripts; the home directory may be mounted from persistent storage.
+COPY container/100_seed_abil.sh /etc/workstation-startup.d/100_seed-abil.sh
+COPY container/120_install_abil_extensions.sh /etc/workstation-startup.d/120_install-abil-extensions.sh
+COPY container/workspace-settings.abil.json /opt/workshop/workspace-settings.json
+COPY container/machine-settings.abil.json /opt/workshop/machine-settings.json
+RUN chmod +x /etc/workstation-startup.d/100_seed-abil.sh \
+             /etc/workstation-startup.d/120_install-abil-extensions.sh
+
+EXPOSE 80

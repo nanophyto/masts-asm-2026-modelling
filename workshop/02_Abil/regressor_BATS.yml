@@ -12,7 +12,7 @@
 
   verbose: 1 # scikit-learn warning verbosity
   seed : 1 # random seed
-  n_threads : 3 # how many cpu threads to use
+  n_threads : 8 # how many cpu threads to use
   cv : 10 # number of cross folds
   ensemble_config:
     classifier: False

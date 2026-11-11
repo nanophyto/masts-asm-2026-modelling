@@ -77,7 +77,7 @@ async function loadStations() {
     const response = await fetch(`./workstations.json?v=${Date.now()}`, {cache: "no-store"});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const config = await response.json();
-    if (config.schemaVersion !== 2 || !Array.isArray(config.accounts) || config.accounts.length !== 29 ||
+    if (config.schemaVersion !== 2 || !Array.isArray(config.accounts) || config.accounts.length !== 28 ||
         config.accounts.some(a => !/^[a-z0-9]+$/.test(a.username) || !a.name || a.username === "admin")) {
       throw new Error("Unexpected account configuration");
     }

@@ -24,14 +24,15 @@ class LandingPageTests(unittest.TestCase):
     def setUp(self):
         self.config = load_config()
 
-    def test_roster_is_exactly_29_non_admin_names_without_roles(self):
+    def test_roster_is_exactly_28_non_admin_names_without_roles(self):
         accounts = self.config["accounts"]
-        self.assertEqual(len(accounts), 29)
-        self.assertEqual(len({a["username"] for a in accounts}), 29)
+        self.assertEqual(len(accounts), 28)
+        self.assertEqual(len({a["username"] for a in accounts}), 28)
         self.assertTrue(all(set(a) == {"name", "username", "url"} for a in accounts))
         self.assertIn({"name": "Cheerful Crab", "username": "cheerfulcrab", "url": None}, accounts)
         self.assertEqual(accounts[-1]["username"], "zestyzebrafish")
         self.assertNotIn("admin", [a["username"] for a in accounts])
+        self.assertNotIn("eagereel", [a["username"] for a in accounts])
         self.assertNotIn("admin" + "@nanophyto.org", json.dumps(self.config))
         self.assertFalse(any("@" in a["name"] or "@" in a["username"] for a in accounts))
 
@@ -91,7 +92,7 @@ class LandingPageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "workstations.json"
             path.write_text(json.dumps(self.config))
-            self.assertEqual(len(load_config(path)["accounts"]), 29)
+            self.assertEqual(len(load_config(path)["accounts"]), 28)
             self.config["accounts"][0]["username"] = "admin"
             path.write_text(json.dumps(self.config))
             with self.assertRaises(ValueError):
@@ -112,6 +113,19 @@ class LandingPageTests(unittest.TestCase):
             self.assertNotIn(removed, index)
         self.assertNotIn('.help-section', style)
         self.assertNotIn('.support-note', style)
+
+    def test_public_site_publishes_vm_selector_instead_of_julia_docs(self):
+        workflow = (ROOT / '.github/workflows/documentation.yml').read_text()
+        page = (ROOT / 'site/index.html').read_text()
+        app = (ROOT / 'site/app.js').read_text()
+        self.assertIn('path: site/', workflow)
+        self.assertNotIn('docs/build', workflow)
+        self.assertNotIn('docs/make.jl', workflow)
+        self.assertIn('Find your workstation', page)
+        self.assertIn('28 accounts', page)
+        self.assertIn('config.accounts.length !== 28', app)
+        self.assertIn('Open workstation', app)
+        self.assertIn('workshops.nanophyto.org', (ROOT / 'README.md').read_text())
 
     def test_page_has_no_hero_and_no_role_split(self):
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
