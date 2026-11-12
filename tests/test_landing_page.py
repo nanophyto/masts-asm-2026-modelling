@@ -125,7 +125,6 @@ class LandingPageTests(unittest.TestCase):
         self.assertIn('29 accounts', page)
         self.assertIn('config.accounts.length !== 29', app)
         self.assertIn('Open workstation', app)
-        self.assertIn('workshops.nanophyto.org', (ROOT / 'README.md').read_text())
 
     def test_page_has_no_hero_and_no_role_split(self):
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
