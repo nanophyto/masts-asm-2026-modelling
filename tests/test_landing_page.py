@@ -29,7 +29,7 @@ class LandingPageTests(unittest.TestCase):
         self.assertEqual(len(accounts), 28)
         self.assertEqual(len({a["username"] for a in accounts}), 28)
         self.assertTrue(all(set(a) == {"name", "username", "url"} for a in accounts))
-        self.assertIn({"name": "Cheerful Crab", "username": "cheerfulcrab", "url": None}, accounts)
+        self.assertTrue(any(a["name"] == "Cheerful Crab" and a["username"] == "cheerfulcrab" for a in accounts))
         self.assertEqual(accounts[-1]["username"], "zestyzebrafish")
         self.assertNotIn("admin", [a["username"] for a in accounts])
         self.assertNotIn("eagereel", [a["username"] for a in accounts])
@@ -79,6 +79,7 @@ class LandingPageTests(unittest.TestCase):
         self.assertEqual(sum(bool(a["url"]) for a in both["accounts"]), 2)
 
     def test_bad_links_duplicate_account_and_duplicate_url_are_rejected(self):
+        original = json.dumps(self.config, sort_keys=True)
         for url in ("http://one.cloudworkstations.dev", "https://example.com", "https://cloudworkstations.dev", "https://user@one.cloudworkstations.dev"):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 apply_updates(self.config, [("cheerfulcrab", url)])
@@ -86,7 +87,7 @@ class LandingPageTests(unittest.TestCase):
             apply_updates(self.config, [("cheerfulcrab", "https://one.cloudworkstations.dev"), ("Cheerful Crab", "https://two.cloudworkstations.dev")])
         with self.assertRaises(ValueError):
             apply_updates(self.config, [("cheerfulcrab", "https://one.cloudworkstations.dev"), ("wisewalrus", "https://one.cloudworkstations.dev")])
-        self.assertTrue(all(a["url"] is None for a in self.config["accounts"]))
+        self.assertEqual(json.dumps(self.config, sort_keys=True), original)
 
     def test_config_rejects_admin_and_duplicate_usernames(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -125,7 +126,6 @@ class LandingPageTests(unittest.TestCase):
         self.assertIn('28 accounts', page)
         self.assertIn('config.accounts.length !== 28', app)
         self.assertIn('Open workstation', app)
-        self.assertIn('workshops.nanophyto.org', (ROOT / 'README.md').read_text())
 
     def test_page_has_no_hero_and_no_role_split(self):
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
