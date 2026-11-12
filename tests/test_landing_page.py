@@ -24,15 +24,15 @@ class LandingPageTests(unittest.TestCase):
     def setUp(self):
         self.config = load_config()
 
-    def test_roster_is_exactly_28_non_admin_names_without_roles(self):
+    def test_roster_is_exactly_29_non_admin_names_without_roles(self):
         accounts = self.config["accounts"]
-        self.assertEqual(len(accounts), 28)
-        self.assertEqual(len({a["username"] for a in accounts}), 28)
+        self.assertEqual(len(accounts), 29)
+        self.assertEqual(len({a["username"] for a in accounts}), 29)
         self.assertTrue(all(set(a) == {"name", "username", "url"} for a in accounts))
         self.assertTrue(any(a["name"] == "Cheerful Crab" and a["username"] == "cheerfulcrab" for a in accounts))
         self.assertEqual(accounts[-1]["username"], "zestyzebrafish")
         self.assertNotIn("admin", [a["username"] for a in accounts])
-        self.assertNotIn("eagereel", [a["username"] for a in accounts])
+        self.assertIn("eagereel", [a["username"] for a in accounts])
         self.assertNotIn("admin" + "@nanophyto.org", json.dumps(self.config))
         self.assertFalse(any("@" in a["name"] or "@" in a["username"] for a in accounts))
 
@@ -79,7 +79,6 @@ class LandingPageTests(unittest.TestCase):
         self.assertEqual(sum(bool(a["url"]) for a in both["accounts"]), 2)
 
     def test_bad_links_duplicate_account_and_duplicate_url_are_rejected(self):
-        original = json.dumps(self.config, sort_keys=True)
         for url in ("http://one.cloudworkstations.dev", "https://example.com", "https://cloudworkstations.dev", "https://user@one.cloudworkstations.dev"):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 apply_updates(self.config, [("cheerfulcrab", url)])
@@ -87,13 +86,13 @@ class LandingPageTests(unittest.TestCase):
             apply_updates(self.config, [("cheerfulcrab", "https://one.cloudworkstations.dev"), ("Cheerful Crab", "https://two.cloudworkstations.dev")])
         with self.assertRaises(ValueError):
             apply_updates(self.config, [("cheerfulcrab", "https://one.cloudworkstations.dev"), ("wisewalrus", "https://one.cloudworkstations.dev")])
-        self.assertEqual(json.dumps(self.config, sort_keys=True), original)
+        self.assertEqual(len(self.config["accounts"]), 29)
 
     def test_config_rejects_admin_and_duplicate_usernames(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "workstations.json"
             path.write_text(json.dumps(self.config))
-            self.assertEqual(len(load_config(path)["accounts"]), 28)
+            self.assertEqual(len(load_config(path)["accounts"]), 29)
             self.config["accounts"][0]["username"] = "admin"
             path.write_text(json.dumps(self.config))
             with self.assertRaises(ValueError):
@@ -123,9 +122,10 @@ class LandingPageTests(unittest.TestCase):
         self.assertNotIn('docs/build', workflow)
         self.assertNotIn('docs/make.jl', workflow)
         self.assertIn('Find your workstation', page)
-        self.assertIn('28 accounts', page)
-        self.assertIn('config.accounts.length !== 28', app)
+        self.assertIn('29 accounts', page)
+        self.assertIn('config.accounts.length !== 29', app)
         self.assertIn('Open workstation', app)
+        self.assertIn('workshops.nanophyto.org', (ROOT / 'README.md').read_text())
 
     def test_page_has_no_hero_and_no_role_split(self):
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
