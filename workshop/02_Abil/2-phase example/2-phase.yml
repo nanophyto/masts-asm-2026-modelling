@@ -1,6 +1,6 @@
 ---
   root: ./
-  run_name: pro_pac #update for specific run name
+  run_name: pro_na #update for specific run name
 
   path_out:  ModelOutput/ #root + folder
   path_in:  predictions/ens/ #root + folder
@@ -20,8 +20,8 @@
     classifier: True
     regressor: True
     m1: "rf"
-    m2: "xgb"
-    m3: "knn"
+    m2: "knn"
+    #m3: "xgb"
      
   upsample: False
   stratify: True
